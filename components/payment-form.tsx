@@ -68,7 +68,7 @@ export function PaymentForm({
     <form onSubmit={onSubmit} className="card h-fit space-y-3 p-5">
       <h2 className="font-medium text-[#eef0f4]">Charge with Paystack</h2>
       <input name="name" placeholder="Customer name" required className="w-full" />
-      <input name="phone" placeholder="2547..." required className="w-full" />
+      <input name="phone" placeholder="07XXXXXXXX" required className="w-full" />
       <input name="macAddress" placeholder="MAC (optional, auto-connect)" className="w-full" />
       <select name="routerId" required className="w-full">
         <option value="">Router</option>

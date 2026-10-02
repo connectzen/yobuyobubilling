@@ -14,8 +14,8 @@ export async function POST(request: Request) {
   const routerId = String(body?.routerId ?? "");
   const planId = String(body?.planId ?? "");
   const macAddress = String(body?.macAddress ?? "").trim() || undefined;
-  if (!name || !phone || !routerId || !planId) {
-    return fail("Customer, phone, router, and plan are required");
+  if (!phone || !routerId || !planId) {
+    return fail("Phone, router, and plan are required");
   }
 
   const db = sql();

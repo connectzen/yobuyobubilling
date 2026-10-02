@@ -2,6 +2,8 @@ import { sql, type Plan, type Router } from "../db";
 import { getPaystackSecret } from "../env";
 import { isChargeSuccessful, toPaystackAmount } from "../paystack";
 import { applySuccessfulPayment } from "./fulfill";
+import { kenyaMpesaPhone, kenyaPhoneDisplay } from "./kenya-phone";
+import { normalizeMac } from "./access";
 
 export async function startPackageCharge(input: {
   operatorId: string;
@@ -11,13 +13,22 @@ export async function startPackageCharge(input: {
   phone: string;
   macAddress?: string;
 }) {
+  const displayPhone = kenyaPhoneDisplay(input.phone);
+  const mpesaPhone = kenyaMpesaPhone(input.phone);
+  const name = input.name.trim() || `Customer ${displayPhone}`;
+  let macAddress: string | undefined;
+  try {
+    macAddress = normalizeMac(input.macAddress);
+  } catch {
+    macAddress = undefined;
+  }
   const db = sql();
   const reference = `yb_${crypto.randomUUID().replaceAll("-", "")}`;
   await db`
     insert into payments (operator_id, router_id, plan_id, reference, phone, amount_kes, customer_name, mac_address)
     values (
       ${input.operatorId}, ${input.router.id}, ${input.plan.id}, ${reference},
-      ${input.phone}, ${input.plan.price_kes}, ${input.name}, ${input.macAddress ?? null}
+      ${displayPhone}, ${input.plan.price_kes}, ${name}, ${macAddress ?? null}
     )
   `;
 
@@ -28,11 +39,11 @@ export async function startPackageCharge(input: {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      email: `${input.phone}@customers.yobuyobu.com`,
+      email: `${mpesaPhone}@customers.yobuyobu.com`,
       amount: String(toPaystackAmount(input.plan.price_kes)),
       currency: "KES",
       reference,
-      mobile_money: { phone: input.phone, provider: "mpesa" },
+      mobile_money: { phone: mpesaPhone, provider: "mpesa" },
     }),
   });
   const payload = await charge.json();

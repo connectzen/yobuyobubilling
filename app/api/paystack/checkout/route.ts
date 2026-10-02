@@ -5,7 +5,7 @@ import { fail, ok } from "@/lib/api";
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const token = String(body?.token ?? "").trim();
-  const name = String(body?.name ?? "").trim() || "Hotspot customer";
+  const name = String(body?.name ?? "").trim();
   const phone = String(body?.phone ?? "").replace(/\s+/g, "");
   const planId = String(body?.planId ?? "");
   const macAddress = String(body?.macAddress ?? "").trim() || undefined;

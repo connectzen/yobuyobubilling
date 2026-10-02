@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 export type ServiceType = "hotspot" | "pppoe";
 
 export type GrantAccessInput = {
@@ -11,33 +13,47 @@ export type GrantAccessInput = {
   macAddress?: string;
 };
 
+function tryDo(command: string): string {
+  return `:do { ${command} } on-error={}`;
+}
+
 export function grantAccess(input: GrantAccessInput) {
   if (input.durationMinutes <= 0) {
     throw new Error("Duration must be greater than zero");
   }
 
-  const expiresAt = new Date(
-    input.now.getTime() + input.durationMinutes * 60_000,
-  );
+  const expiresAt = new Date(input.now.getTime() + input.durationMinutes * 60_000);
   const rate = `${input.downloadKbps}k/${input.uploadKbps}k`;
   const password = input.password ?? input.username;
-
   const mac = normalizeMac(input.macAddress);
+
   const lines =
     input.serviceType === "pppoe"
       ? [
-          `/ppp secret remove [find name="${input.username}"]`,
-          `/ppp secret add name=${input.username} password=${password} service=pppoe profile=yb-pppoe`,
+          tryDo(`/ppp secret remove [find name="${input.username}"]`),
+          tryDo(
+            `/ppp secret add name=${input.username} password=${password} service=pppoe profile=yb-pppoe`,
+          ),
         ]
       : [
-          `/ip hotspot user remove [find name="${input.username}"]`,
-          `/ip hotspot user add name=${input.username} password=${password} profile=yb-hotspot rate-limit=${rate}`,
+          tryDo(`/ip hotspot user remove [find name="${input.username}"]`),
+          tryDo(
+            `/ip hotspot user add name=${input.username} password=${password} profile=yb-hotspot rate-limit=${rate}`,
+          ),
         ];
 
   if (mac && input.serviceType === "hotspot") {
     lines.push(
-      `/ip hotspot ip-binding remove [find mac-address="${mac}"]`,
-      `/ip hotspot ip-binding add mac-address=${mac} type=bypassed comment="yb-${input.username}"`,
+      tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
+      tryDo(
+        `/ip hotspot ip-binding add mac-address=${mac} type=bypassed server=yb-hotspot comment="yb-${input.username}"`,
+      ),
+      tryDo(`/ip hotspot cookie remove [find mac-address="${mac}"]`),
+      tryDo(`/ip hotspot cookie add mac-address=${mac} user=${input.username}`),
+      tryDo(
+        `/ip hotspot active login user=${input.username} password=${password} mac-address=${mac}`,
+      ),
+      tryDo(`/ip hotspot host remove [find mac-address="${mac}"]`),
     );
   }
 
@@ -55,20 +71,28 @@ export function kickScript(
 ): string {
   if (serviceType === "pppoe") {
     return [
-      `/ppp active remove [find name="${username}"]`,
-      `/ppp secret disable [find name="${username}"]`,
+      tryDo(`/ppp active remove [find name="${username}"]`),
+      tryDo(`/ppp secret disable [find name="${username}"]`),
     ].join("\n");
   }
 
   const lines = [
-    `/ip hotspot active remove [find user="${username}"]`,
-    `/ip hotspot user disable [find name="${username}"]`,
+    tryDo(`/ip hotspot active remove [find user="${username}"]`),
+    tryDo(`/ip hotspot user disable [find name="${username}"]`),
   ];
   const mac = normalizeMac(macAddress);
   if (mac) {
-    lines.push(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`);
+    lines.push(
+      tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
+      tryDo(`/ip hotspot cookie remove [find mac-address="${mac}"]`),
+      tryDo(`/ip hotspot host remove [find mac-address="${mac}"]`),
+    );
   }
   return lines.join("\n");
+}
+
+export function randomHotspotUsername(): string {
+  return `yb${randomBytes(5).toString("hex")}`;
 }
 
 export function usernameFromPhone(phone: string): string {
@@ -80,12 +104,13 @@ export function usernameFromPhone(phone: string): string {
 }
 
 export function normalizeMac(value?: string): string | undefined {
-  const mac = (value ?? "").trim().toUpperCase();
-  if (!mac) {
+  const raw = (value ?? "").trim();
+  if (!raw) {
     return undefined;
   }
-  if (!/^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}$/.test(mac)) {
+  const hex = raw.toUpperCase().replace(/[^0-9A-F]/g, "");
+  if (hex.length !== 12) {
     throw new Error("MAC address is invalid");
   }
-  return mac.replace(/-/g, ":");
+  return hex.match(/.{2}/g)!.join(":");
 }

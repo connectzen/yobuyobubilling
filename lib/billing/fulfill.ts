@@ -1,5 +1,6 @@
 import { sql, type Plan, type Router } from "../db";
-import { grantAccess, usernameFromPhone } from "./access";
+import { grantAccess, normalizeMac, randomHotspotUsername } from "./access";
+import { kenyaPhoneDisplay } from "./kenya-phone";
 
 export async function fulfillPaidAccess(input: {
   operatorId: string;
@@ -24,8 +25,16 @@ export async function fulfillPaidAccess(input: {
     throw new Error("Router or plan not found");
   }
 
-  const username = usernameFromPhone(input.phone);
+  const displayPhone = kenyaPhoneDisplay(input.phone);
+  const username = randomHotspotUsername();
   const password = username;
+  const name = input.name.trim() || `Customer ${displayPhone}`;
+  let macAddress: string | undefined;
+  try {
+    macAddress = normalizeMac(input.macAddress);
+  } catch {
+    macAddress = undefined;
+  }
   const grant = grantAccess({
     now: new Date(),
     durationMinutes: plan.duration_minutes,
@@ -34,15 +43,15 @@ export async function fulfillPaidAccess(input: {
     serviceType: plan.service_type,
     username,
     password,
-    macAddress: input.macAddress,
+    macAddress,
   });
 
   const rows = await db<{ id: string }[]>`
     insert into subscribers (
       operator_id, router_id, plan_id, name, phone, username, password, service_type, expires_at, mac_address
     ) values (
-      ${input.operatorId}, ${router.id}, ${plan.id}, ${input.name}, ${input.phone},
-      ${username}, ${password}, ${plan.service_type}, ${grant.expiresAt.toISOString()}, ${input.macAddress ?? null}
+      ${input.operatorId}, ${router.id}, ${plan.id}, ${name}, ${displayPhone},
+      ${username}, ${password}, ${plan.service_type}, ${grant.expiresAt.toISOString()}, ${macAddress ?? null}
     )
     returning id
   `;

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { grantAccess, isExpired, kickScript } from "../lib/billing/access.ts";
+import {
+  grantAccess,
+  isExpired,
+  kickScript,
+  normalizeMac,
+  randomHotspotUsername,
+} from "../lib/billing/access.ts";
 
 describe("package access", () => {
   it("adds plan duration to the grant time", () => {
@@ -36,24 +42,39 @@ describe("package access", () => {
     assert.match(grant.script, /password=secret22/);
   });
 
-  it("bypasses the hotspot client immediately when a MAC is known", () => {
+  it("bypasses and logs in the hotspot client immediately when a MAC is known", () => {
     const grant = grantAccess({
       now: new Date("2026-10-02T08:00:00.000Z"),
       durationMinutes: 60,
       downloadKbps: 10240,
       uploadKbps: 2048,
       serviceType: "hotspot",
-      username: "254700000000",
-      macAddress: "AA:BB:CC:DD:EE:FF",
+      username: "ybab12cd34",
+      macAddress: "aabbccddeeff",
     });
 
-    assert.match(grant.script, /\/ip hotspot ip-binding add/);
     assert.match(grant.script, /mac-address=AA:BB:CC:DD:EE:FF/);
     assert.match(grant.script, /type=bypassed/);
+    assert.match(grant.script, /\/ip hotspot host remove \[find mac-address="AA:BB:CC:DD:EE:FF"\]/);
+    assert.match(grant.script, /\/ip hotspot active login user=ybab12cd34 password=ybab12cd34 mac-address=AA:BB:CC:DD:EE:FF/);
+    assert.match(grant.script, /:do \{ \/ip hotspot ip-binding add/);
+  });
+
+  it("normalizes compact and hyphen MAC addresses", () => {
+    assert.equal(normalizeMac("aa-bb-cc-dd-ee-ff"), "AA:BB:CC:DD:EE:FF");
+    assert.equal(normalizeMac("AABBCCDDEEFF"), "AA:BB:CC:DD:EE:FF");
+    assert.equal(normalizeMac(""), undefined);
+  });
+
+  it("makes a random MikroTik username instead of using the customer's name", () => {
+    const one = randomHotspotUsername();
+    const two = randomHotspotUsername();
+    assert.match(one, /^yb[a-f0-9]{10}$/);
+    assert.notEqual(one, two);
   });
 
   it("removes the MAC bypass when the package expires", () => {
-    const script = kickScript("254700000000", "hotspot", "AA:BB:CC:DD:EE:FF");
+    const script = kickScript("ybab12cd34", "hotspot", "AA:BB:CC:DD:EE:FF");
     assert.match(script, /\/ip hotspot ip-binding remove/);
     assert.match(script, /AA:BB:CC:DD:EE:FF/);
   });

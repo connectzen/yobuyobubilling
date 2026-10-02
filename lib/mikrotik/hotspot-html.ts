@@ -1,3 +1,5 @@
+import { normalizeMac } from "../billing/access.ts";
+
 export const HOTSPOT_HTML_FILES = [
   "login.html",
   "status.html",
@@ -29,7 +31,12 @@ export function clientMacFromQuery(params: {
   mac?: string;
   "identity-mac"?: string;
 }): string {
-  return (params.mac || params["identity-mac"] || "").trim();
+  const raw = (params.mac || params["identity-mac"] || "").trim();
+  try {
+    return normalizeMac(raw) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 export function buildHotspotHtml(file: string, input: HotspotHtmlInput): string {

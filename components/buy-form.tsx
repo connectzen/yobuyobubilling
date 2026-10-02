@@ -36,7 +36,11 @@ export function BuyForm({
           password: payload.data.password,
           expiresAt: payload.data.expiresAt,
         });
-        setMessage("Payment confirmed. You are connected.");
+        setMessage(
+          macAddress
+            ? "Payment confirmed. This phone is being opened on the network now."
+            : "Payment confirmed. Open a website to finish connecting.",
+        );
       }
       if (payload.success && payload.data.status === "failed") {
         setError("Payment failed. Try again.");
@@ -44,7 +48,7 @@ export function BuyForm({
       }
     }, 2000);
     return () => window.clearInterval(timer);
-  }, [grant, reference]);
+  }, [grant, macAddress, reference]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,7 +61,6 @@ export function BuyForm({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         token,
-        name: String(formData.get("name") ?? "Hotspot customer"),
         phone: String(formData.get("phone") ?? ""),
         planId: String(formData.get("planId") ?? ""),
         macAddress,
@@ -81,8 +84,18 @@ export function BuyForm({
 
   return (
     <form onSubmit={onSubmit} className="mt-6 space-y-3">
-      <input name="name" placeholder="Your name" className="w-full" />
-      <input name="phone" placeholder="2547..." required className="w-full" />
+      <label className="text-sm">
+        M-PESA number
+        <input
+          name="phone"
+          inputMode="numeric"
+          autoComplete="tel"
+          maxLength={10}
+          placeholder="07XXXXXXXX"
+          required
+          className="mt-1 w-full"
+        />
+      </label>
       <select name="planId" required className="w-full">
         <option value="">Choose a package</option>
         {plans.map((plan) => (
@@ -93,15 +106,17 @@ export function BuyForm({
       </select>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       {message ? <p className="text-sm text-emerald-400">{message}</p> : null}
-      {grant ? (
-        <div className="rounded-lg border border-[#252a35] bg-[#0e1117] p-3 text-sm">
-          <p>Login with your phone number.</p>
-          <p className="mt-1 font-mono">User: {grant.username}</p>
-          <p className="font-mono">Pass: {grant.password}</p>
-          {macAddress ? (
-            <p className="mt-2 text-[#9aa3b2]">This device is being opened automatically.</p>
-          ) : null}
-        </div>
+      {grant && macAddress ? (
+        <p className="text-sm text-[#9aa3b2]">
+          You can close this page and browse. If a site still asks you to sign in, open it
+          again after a few seconds.
+        </p>
+      ) : null}
+      {!macAddress ? (
+        <p className="text-sm text-amber-300">
+          Open this page from the Wi-Fi sign-in screen so we can see this phone’s MAC
+          address and connect it automatically.
+        </p>
       ) : null}
       <button className="btn-primary w-full" type="submit" disabled={Boolean(reference) && !grant}>
         {reference && !grant ? "Waiting for M-PESA..." : "Pay and connect"}
