@@ -19,8 +19,10 @@ function fetchMode(appUrl: string): "http" | "https" {
   return appUrl.startsWith("https://") ? "https" : "http";
 }
 
-function fetchOptions(appUrl: string): string {
-  return fetchMode(appUrl) === "https" ? "mode=https check-certificate=yes" : "mode=http";
+function fetchFlags(appUrl: string): string {
+  // RouterOS treats mode=https plus url="https://..." as a conflict.
+  // check-certificate=yes fails on boxes without trusted CAs (common on 7.19).
+  return fetchMode(appUrl) === "https" ? " check-certificate=no" : "";
 }
 
 export function buildProvisionOneLiner(input: {
@@ -30,7 +32,7 @@ export function buildProvisionOneLiner(input: {
   const appUrl = requireText(input.appUrl, "App URL").replace(/\/$/, "");
   const token = requireText(input.token, "Token");
   const url = `${appUrl}/provision/${encodeURIComponent(token)}`;
-  return `{/tool fetch ${fetchOptions(appUrl)} url="${url}" dst-path=yobuyobu.rsc;:delay 2s;/import yobuyobu.rsc;}`;
+  return `{/tool fetch${fetchFlags(appUrl)} url="${url}" dst-path=yobuyobu.rsc; :delay 2s; /import yobuyobu.rsc;}`;
 }
 
 export function buildBootstrapScript(input: {
@@ -56,7 +58,7 @@ export function buildBootstrapScript(input: {
   :local id [/system identity get name]
   :local ver [/system resource get version]
   :local board [/system resource get board-name]
-  /tool fetch ${fetchOptions(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-cmd.rsc
+  /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-cmd.rsc
   :delay 200ms
   /import yobuyobu-cmd.rsc
 }

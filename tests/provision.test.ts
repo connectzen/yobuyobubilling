@@ -14,10 +14,12 @@ describe("MikroTik provision scripts", () => {
     });
 
     assert.match(line, /^\{/);
-    assert.match(line, /\/tool fetch mode=https check-certificate=yes/);
+    assert.match(line, /\/tool fetch check-certificate=no /);
     assert.match(line, /url="https:\/\/billing\.yobuyobu\.com\/provision\/tok_abc"/);
     assert.match(line, /dst-path=yobuyobu\.rsc/);
     assert.match(line, /\/import yobuyobu\.rsc/);
+    assert.doesNotMatch(line, /mode=/);
+    assert.doesNotMatch(line, /check-certificate=yes/);
   });
 
   it("rejects a missing token or app url", () => {
@@ -41,6 +43,9 @@ describe("MikroTik provision scripts", () => {
     assert.match(script, /yobuyobu-agent/);
     assert.match(script, /\/api\/agent\/tok_abc\/sync/);
     assert.match(script, /interval=3s/);
+    assert.match(script, /\/tool fetch check-certificate=no /);
+    assert.doesNotMatch(script, /mode=/);
+    assert.doesNotMatch(script, /check-certificate=yes/);
     assert.doesNotMatch(script, /interval=10s/);
     assert.doesNotMatch(script, /YOUR_|TODO|placeholder/i);
   });
@@ -50,8 +55,9 @@ describe("MikroTik provision scripts", () => {
       appUrl: "http://192.168.88.10:3000",
       token: "tok_abc",
     });
-    assert.match(line, /\/tool fetch mode=http /);
-    assert.doesNotMatch(line, /mode=https/);
+    assert.match(line, /\/tool fetch url=/);
+    assert.doesNotMatch(line, /mode=/);
+    assert.doesNotMatch(line, /check-certificate/);
   });
 
   it("parses interface reports from the agent", () => {
