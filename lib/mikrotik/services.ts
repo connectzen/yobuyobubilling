@@ -180,13 +180,7 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
       `/ip firewall filter add chain=input action=accept protocol=udp dst-port=67-68 comment=yobuyobu-dhcp place-before=0`,
     ),
     tryDo(`/ip firewall filter remove [find comment="yobuyobu-lan-in"]`),
-    tryDo(
-      `/ip firewall filter add chain=input action=accept in-interface-list=LAN comment=yobuyobu-lan-in place-before=0`,
-    ),
     tryDo(`/ip firewall filter remove [find comment="yobuyobu-fwd"]`),
-    tryDo(
-      `/ip firewall filter add chain=forward action=accept in-interface-list=LAN out-interface-list=WAN comment=yobuyobu-fwd place-before=0`,
-    ),
     tryDo(`/ip dns set allow-remote-requests=yes`),
   );
 
@@ -201,7 +195,7 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
       tryDo(`/ip hotspot profile add name=yb-hotspot hotspot-address=10.10.0.1 dns-name=hotspot.yobuyobu html-directory=hotspot login-by="http-chap,http-pap,mac-cookie"`),
       tryDo(`/ip hotspot user profile remove [find name="yb-hotspot"]`),
       tryDo(`/ip hotspot user profile add name=yb-hotspot shared-users=${input.antiShare ? "1" : "2"} rate-limit=${rosValue("10M/2M")}`),
-      tryDo(`/ip hotspot add name=yb-hotspot interface=${LAN_BRIDGE} address-pool=yb-hotspot profile=yb-hotspot`),
+      tryDo(`/ip hotspot add name=yb-hotspot interface=${LAN_BRIDGE} address-pool=yb-hotspot profile=yb-hotspot disabled=no`),
     );
     if (input.buyHost) {
       const host = rosValue(input.buyHost);
