@@ -32,12 +32,13 @@ describe("MikroTik service configuration", () => {
     });
 
     assert.match(script, /\/log warning "yobuyobu applying LAN and services"/);
-    assert.match(script, /\/interface bridge add name=yb-lan/);
+    assert.match(script, /\/interface bridge add name=yb-lan comment=yobuyobu-lan protocol-mode=none/);
     assert.match(script, /bridge=yb-lan interface=ether2/);
     assert.match(script, /bridge=yb-lan interface=ether5/);
     assert.match(script, /bridge=yb-lan interface=wlan1/);
     assert.doesNotMatch(script, /bridge=yb-lan interface=ether1/);
     assert.doesNotMatch(script, /bridge=yb-lan interface=bridge(?:\s|$)/);
+    assert.match(script, /\/ip dhcp-server add name=yb-hotspot interface=yb-lan address-pool=yb-hotspot/);
     assert.match(script, /\/ip hotspot add name=yb-hotspot interface=yb-lan/);
     assert.match(script, /pppoe-server server add service-name=yb-pppoe interface=yb-lan/);
     assert.match(script, /out-interface=ether1/);
@@ -207,11 +208,15 @@ describe("MikroTik service configuration", () => {
 
     assert.match(script, /bridge=yb-lan interface=ether2/);
     assert.match(script, /bridge=yb-lan interface=sfp1/);
-    assert.doesNotMatch(script, /bridge=yb-lan interface=wifi1/);
-    assert.match(script, /\/interface wifi datapath add name=yb-hotspot bridge=yb-lan/);
+    assert.match(script, /bridge=yb-lan interface=wifi1/);
+    assert.match(script, /\/interface bridge add name=yb-lan comment=yobuyobu-lan protocol-mode=none/);
+    assert.match(script, /datapath\.bridge=yb-lan/);
+    assert.match(script, /\/ip dhcp-server add name=yb-hotspot interface=yb-lan address-pool=yb-hotspot/);
+    assert.match(script, /\/ip dhcp-server network add address=10\.10\.0\.0\/24 gateway=10\.10\.0\.1/);
+    assert.match(script, /dst-port=67-68/);
     assert.match(
       script,
-      /\/interface wifi set \[find name="wifi1"\] disabled=no configuration\.ssid=manyatta configuration\.mode=ap datapath=yb-hotspot security\.authentication-types=""/,
+      /\/interface wifi set \[find name="wifi1"\] disabled=no configuration\.ssid=manyatta configuration\.mode=ap/,
     );
   });
 

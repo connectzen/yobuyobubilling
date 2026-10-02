@@ -124,11 +124,14 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
     `/log warning "yobuyobu applying LAN and services"`,
     tryDo(`/ip hotspot remove [find name="yb-hotspot"]`),
     tryDo(`/interface pppoe-server server remove [find service-name="yb-pppoe"]`),
+    tryDo(`/ip dhcp-server remove [find name="yb-hotspot"]`),
+    tryDo(`/ip dhcp-server network remove [find comment="yobuyobu-hotspot"]`),
+    tryDo(`/ip dhcp-server disable [find interface="bridge"]`),
     tryDo(`/ip address remove [find comment="yobuyobu-hotspot"]`),
     tryDo(`/interface wifi datapath remove [find name="yb-hotspot"]`),
     tryDo(`/interface bridge port remove [find comment="yobuyobu-lan"]`),
     tryDo(`/interface bridge remove [find name="${LAN_BRIDGE}"]`),
-    tryDo(`/interface bridge add name=${LAN_BRIDGE} comment=yobuyobu-lan`),
+    tryDo(`/interface bridge add name=${LAN_BRIDGE} comment=yobuyobu-lan protocol-mode=none`),
     tryDo(`/interface list add name=WAN comment=yobuyobu`),
     tryDo(`/interface list add name=LAN comment=yobuyobu`),
     tryDo(`/interface list member remove [find interface="${LAN_BRIDGE}"]`),
@@ -138,28 +141,25 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
   ];
 
   for (const port of lanPortRecords) {
-    lines.push(tryDo(`/interface bridge port remove [find interface="${port.name}"]`));
-    if (!isWifiwavePort(port)) {
-      lines.push(
-        tryDo(
-          `/interface bridge port add bridge=${LAN_BRIDGE} interface=${port.name} comment=yobuyobu-lan`,
-        ),
-      );
-    }
+    lines.push(
+      tryDo(`/interface bridge port remove [find interface="${port.name}"]`),
+      tryDo(
+        `/interface bridge port add bridge=${LAN_BRIDGE} interface=${port.name} comment=yobuyobu-lan`,
+      ),
+    );
   }
 
   if (wifiwavePorts.length > 0) {
-    lines.push(
-      tryDo(`/interface wifi datapath remove [find name="yb-hotspot"]`),
-      tryDo(
-        `/interface wifi datapath add name=yb-hotspot bridge=${LAN_BRIDGE} comment=yobuyobu-hotspot`,
-      ),
-    );
     for (const port of wifiwavePorts) {
       lines.push(
+        tryDo(`/interface list member remove [find interface="${port.name}"]`),
+        tryDo(`/interface list member add list=LAN interface=${port.name}`),
         tryDo(
-          `/interface wifi set [find name="${port.name}"] disabled=no configuration.ssid=${rosValue(ssid)} configuration.mode=ap datapath=yb-hotspot security.authentication-types=""`,
+          `/interface wifi set [find name="${port.name}"] disabled=no configuration.ssid=${rosValue(ssid)} configuration.mode=ap`,
         ),
+        tryDo(`/interface wifi set [find name="${port.name}"] datapath.bridge=${LAN_BRIDGE}`),
+        tryDo(`/interface wifi set [find name="${port.name}"] datapath.client-isolation=no`),
+        tryDo(`/interface wifi set [find name="${port.name}"] security.authentication-types=""`),
       );
     }
   }
@@ -175,6 +175,19 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
   lines.push(
     tryDo(`/ip firewall nat remove [find comment="yobuyobu-masquerade"]`),
     tryDo(`/ip firewall nat add chain=srcnat out-interface=${wan} action=masquerade comment=yobuyobu-masquerade`),
+    tryDo(`/ip firewall filter remove [find comment="yobuyobu-dhcp"]`),
+    tryDo(
+      `/ip firewall filter add chain=input action=accept protocol=udp dst-port=67-68 comment=yobuyobu-dhcp place-before=0`,
+    ),
+    tryDo(`/ip firewall filter remove [find comment="yobuyobu-lan-in"]`),
+    tryDo(
+      `/ip firewall filter add chain=input action=accept in-interface-list=LAN comment=yobuyobu-lan-in place-before=0`,
+    ),
+    tryDo(`/ip firewall filter remove [find comment="yobuyobu-fwd"]`),
+    tryDo(
+      `/ip firewall filter add chain=forward action=accept in-interface-list=LAN out-interface-list=WAN comment=yobuyobu-fwd place-before=0`,
+    ),
+    tryDo(`/ip dns set allow-remote-requests=yes`),
   );
 
   if (input.hotspot) {
@@ -182,6 +195,8 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
       tryDo(`/ip pool remove [find name="yb-hotspot"]`),
       tryDo(`/ip pool add name=yb-hotspot ranges=10.10.0.10-10.10.0.254`),
       tryDo(`/ip address add address=10.10.0.1/24 interface=${LAN_BRIDGE} comment=yobuyobu-hotspot`),
+      tryDo(`/ip dhcp-server add name=yb-hotspot interface=${LAN_BRIDGE} address-pool=yb-hotspot authoritative=yes disabled=no`),
+      tryDo(`/ip dhcp-server network add address=10.10.0.0/24 gateway=10.10.0.1 dns-server=1.1.1.1,8.8.8.8 comment=yobuyobu-hotspot`),
       tryDo(`/ip hotspot profile remove [find name="yb-hotspot"]`),
       tryDo(`/ip hotspot profile add name=yb-hotspot hotspot-address=10.10.0.1 dns-name=hotspot.yobuyobu html-directory=hotspot login-by="http-chap,http-pap,mac-cookie"`),
       tryDo(`/ip hotspot user profile remove [find name="yb-hotspot"]`),
