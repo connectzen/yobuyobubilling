@@ -31,6 +31,7 @@ describe("MikroTik service configuration", () => {
       antiShare: false,
     });
 
+    assert.match(script, /\/log warning "yobuyobu applying LAN and services"/);
     assert.match(script, /\/interface bridge add name=yb-lan/);
     assert.match(script, /bridge=yb-lan interface=ether2/);
     assert.match(script, /bridge=yb-lan interface=ether5/);

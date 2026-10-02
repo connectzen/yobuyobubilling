@@ -50,7 +50,7 @@ export function buildBootstrapScript(input: {
 /system identity set name="${routerName}"
 /system script remove [find name="yobuyobu-agent"]
 /system scheduler remove [find name="yobuyobu-agent"]
-/system script add name=yobuyobu-agent policy=read,write,policy,test,sensitive source={
+/system script add name=yobuyobu-agent policy=read,write,policy,test,sensitive,ftp source={
   :local names ""
   :foreach i in=[/interface find] do={
     :set names ($names . [/interface get $i name] . ":" . [/interface get $i type] . ",")
@@ -59,10 +59,15 @@ export function buildBootstrapScript(input: {
   :local ver [/system resource get version]
   :local board [/system resource get board-name]
   /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-cmd.rsc
-  :delay 200ms
-  /import yobuyobu-cmd.rsc
+  :delay 1s
+  :local ybcmd ""
+  :do { :set ybcmd [/file get yobuyobu-cmd.rsc contents] } on-error={}
+  :if ([:len $ybcmd] < 20) do={ :return }
+  :if ([:pick $ybcmd 0 16] = "# yobuyobu idle") do={ :return }
+  /log info "yobuyobu applying queued commands"
+  :execute script=$ybcmd
 }
-/system scheduler add name=yobuyobu-agent interval=3s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive
+/system scheduler add name=yobuyobu-agent interval=3s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive,ftp
 /system script run yobuyobu-agent
 `.trim();
 }

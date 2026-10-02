@@ -44,6 +44,9 @@ describe("MikroTik provision scripts", () => {
     assert.match(script, /\/api\/agent\/tok_abc\/sync/);
     assert.match(script, /interval=3s/);
     assert.match(script, /\/tool fetch check-certificate=no /);
+    assert.match(script, /:execute script=\$ybcmd/);
+    assert.match(script, /# yobuyobu idle/);
+    assert.doesNotMatch(script, /\/import yobuyobu-cmd\.rsc/);
     assert.doesNotMatch(script, /mode=/);
     assert.doesNotMatch(script, /check-certificate=yes/);
     assert.doesNotMatch(script, /interval=10s/);

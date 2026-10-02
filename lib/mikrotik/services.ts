@@ -93,6 +93,7 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
   }
 
   const lines = [
+    `/log warning "yobuyobu applying LAN and services"`,
     tryDo(`/ip hotspot remove [find name="yb-hotspot"]`),
     tryDo(`/interface pppoe-server server remove [find service-name="yb-pppoe"]`),
     tryDo(`/ip address remove [find comment="yobuyobu-hotspot"]`),
