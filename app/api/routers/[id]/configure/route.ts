@@ -40,20 +40,24 @@ export async function POST(
 
   const lanInterface = customerLanPorts(wanInterface, router.interfaces ?? []).join(",");
 
-  await db`
-    insert into router_commands (router_id, script)
-    values (${router.id}, ${script})
-  `;
-  await db`
-    update routers
-    set wan_interface = ${wanInterface},
-        lan_interface = ${lanInterface},
-        hotspot_enabled = ${Boolean(body?.hotspot)},
-        pppoe_enabled = ${Boolean(body?.pppoe)},
-        anti_share_enabled = ${Boolean(body?.antiShare)},
-        status = 'configured'
-    where id = ${router.id}
-  `;
+  try {
+    await db`
+      insert into router_commands (router_id, script)
+      values (${router.id}, ${script})
+    `;
+    await db`
+      update routers
+      set wan_interface = ${wanInterface},
+          lan_interface = ${lanInterface},
+          hotspot_enabled = ${Boolean(body?.hotspot)},
+          pppoe_enabled = ${Boolean(body?.pppoe)},
+          anti_share_enabled = ${Boolean(body?.antiShare)},
+          status = 'configured'
+      where id = ${router.id}
+    `;
+  } catch {
+    return fail("Could not queue configuration", 500);
+  }
 
   return ok({ queued: true });
 }

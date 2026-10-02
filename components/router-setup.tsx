@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Router } from "@/lib/db";
 import { CopyBlock } from "@/components/copy-block";
-import { customerLanPorts } from "@/lib/mikrotik/services";
+import { customerLanPorts, normalizeRouterPorts } from "@/lib/mikrotik/services";
+import { readConfigureApiResult, uploadBlockedReason } from "@/lib/mikrotik/setup-ui";
 
 export function RouterSetup({
   router,
@@ -18,16 +19,31 @@ export function RouterSetup({
 }) {
   const nav = useRouter();
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [pending, setPending] = useState(false);
   const [wan, setWan] = useState(router.wan_interface ?? "");
-  const [hotspot, setHotspot] = useState(router.hotspot_enabled);
-  const [pppoe, setPppoe] = useState(router.pppoe_enabled);
+  const [hotspot, setHotspot] = useState(
+    router.status === "configured" ? router.hotspot_enabled : true,
+  );
+  const [pppoe, setPppoe] = useState(
+    router.status === "configured" ? router.pppoe_enabled : true,
+  );
   const [antiShare, setAntiShare] = useState(
     router.status === "configured" ? router.anti_share_enabled : true,
   );
-  const ports = useMemo(() => router.interfaces ?? [], [router.interfaces]);
+  const ports = useMemo(
+    () => normalizeRouterPorts(router.interfaces),
+    [router.interfaces],
+  );
   const customerPorts = useMemo(() => customerLanPorts(wan, ports), [wan, ports]);
   const connected = ports.length > 0;
+  const blocked = uploadBlockedReason({
+    connected,
+    wan,
+    customerPortCount: customerPorts.length,
+    hotspot,
+    pppoe,
+  });
 
   useEffect(() => {
     if (connected) {
@@ -38,20 +54,33 @@ export function RouterSetup({
   }, [connected, nav]);
 
   async function applyConfig() {
-    setPending(true);
-    setError("");
-    const response = await fetch(`/api/routers/${router.id}/configure`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ wanInterface: wan, hotspot, pppoe, antiShare }),
-    });
-    const payload = await response.json();
-    setPending(false);
-    if (!payload.success) {
-      setError(payload.error ?? "Could not queue configuration");
+    if (blocked) {
+      setSuccess("");
+      setError(blocked);
       return;
     }
-    nav.refresh();
+    setPending(true);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch(`/api/routers/${router.id}/configure`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wanInterface: wan, hotspot, pppoe, antiShare }),
+      });
+      const result = readConfigureApiResult(response.status, await response.text());
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setSuccess(result.message);
+      nav.refresh();
+    } catch {
+      setError("Could not reach the server. Try again.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -95,7 +124,7 @@ export function RouterSetup({
         <h2 className="font-medium">2. Ports and services</h2>
         {connected ? (
           <p className="mt-1 text-sm text-[#9aa3b2]">
-            Choose the WAN port. Every remaining port joins Hotspot and PPPoE.
+            Choose the WAN port. Every remaining customer port joins Hotspot and PPPoE.
           </p>
         ) : (
           <p className="mt-1 text-sm text-[#9aa3b2]">
@@ -163,18 +192,22 @@ export function RouterSetup({
         <p className="mt-2 text-sm text-[#6f7887]">
           Anti-sharing keeps one login per account. Extra phones or hotspot sharing are blocked.
         </p>
+        {blocked && !pending ? <p className="mt-3 text-sm text-amber-300">{blocked}</p> : null}
         {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
+        {success ? <p className="mt-3 text-sm text-emerald-400">{success}</p> : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Link className="btn-ghost" href="/console/routers">
             Cancel
           </Link>
           <button
             className="btn-primary"
-            disabled={pending || !connected || !wan || customerPorts.length === 0}
+            disabled={pending}
             type="button"
-            onClick={applyConfig}
+            onClick={() => {
+              void applyConfig();
+            }}
           >
-            {pending ? "Uploading..." : connected ? "Upload configuration" : "Waiting for ports"}
+            {pending ? "Uploading..." : "Upload configuration"}
           </button>
         </div>
       </section>

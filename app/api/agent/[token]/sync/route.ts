@@ -58,12 +58,17 @@ export async function POST(
     return rsc(idleAgentScript());
   }
 
-  const ids = queued.map((row) => row.id);
-  await db`
-    update router_commands
-    set status = 'sent', sent_at = now()
-    where id = any(${ids}::uuid[])
-  `;
+  try {
+    for (const row of queued) {
+      await db`
+        update router_commands
+        set status = 'sent', sent_at = now()
+        where id = ${row.id}
+      `;
+    }
+  } catch {
+    // Still return the scripts so the MikroTik applies them on this poll.
+  }
 
   return rsc(queued.map((row) => row.script).join("\n"));
 }

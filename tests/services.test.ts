@@ -101,4 +101,42 @@ describe("MikroTik service configuration", () => {
       }),
     );
   });
+
+  it("keeps physical customer ports when the report includes lo and bridge", () => {
+    const ports = [
+      ...["ether1", "ether2", "ether3", "ether4", "ether5", "ether6", "ether7", "ether8"].map(
+        (name) => ({ name, type: "ether" }),
+      ),
+      { name: "sfp1", type: "sfp-sfpplus" },
+      { name: "lo", type: "loopback" },
+      { name: "bridge", type: "bridge" },
+    ];
+    assert.equal(ports.length, 11);
+    assert.deepEqual(customerLanPorts("ether1", ports), [
+      "ether2",
+      "ether3",
+      "ether4",
+      "ether5",
+      "ether6",
+      "ether7",
+      "ether8",
+      "sfp1",
+    ]);
+  });
+
+  it("quotes RouterOS list values and puts yb-lan on the LAN list", () => {
+    const script = buildServiceConfigScript({
+      wanInterface: "ether1",
+      ports: samplePorts,
+      hotspot: true,
+      pppoe: true,
+      antiShare: true,
+    });
+
+    assert.match(script, /login-by="http-chap,http-pap,mac-cookie"/);
+    assert.match(script, /authentication="pap,chap,mschap2"/);
+    assert.match(script, /interface list member add list=LAN interface=yb-lan/);
+    assert.match(script, /interface list member add list=WAN interface=ether1/);
+    assert.match(script, /:do \{ \/interface bridge remove \[find name="yb-lan"\] \} on-error=\{\}/);
+  });
 });
