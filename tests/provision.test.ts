@@ -42,10 +42,12 @@ describe("MikroTik provision scripts", () => {
     assert.match(script, /\/system scheduler/);
     assert.match(script, /yobuyobu-agent/);
     assert.match(script, /\/api\/agent\/tok_abc\/sync/);
+    assert.match(script, /\/api\/agent\/tok_abc\/run/);
     assert.match(script, /interval=3s/);
     assert.match(script, /\/tool fetch check-certificate=no /);
-    assert.match(script, /\/import yobuyobu-cmd\.rsc/);
-    assert.doesNotMatch(script, /:execute script=\$ybcmd/);
+    assert.match(script, /dst-path=yobuyobu-cmd\.rsc/);
+    assert.match(script, /:execute script=\$ybcmd/);
+    assert.doesNotMatch(script, /\/import yobuyobu-cmd\.rsc/);
     assert.match(script, /# yobuyobu idle/);
     assert.doesNotMatch(script, /mode=/);
     assert.doesNotMatch(script, /check-certificate=yes/);

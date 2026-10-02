@@ -44,6 +44,7 @@ export function buildBootstrapScript(input: {
   const token = requireText(input.token, "Token");
   const routerName = escapeRouterOs(requireText(input.routerName, "Router name"));
   const syncUrl = `${appUrl}/api/agent/${token}/sync`;
+  const runUrl = `${appUrl}/api/agent/${token}/run`;
 
   return `
 # Yobuyobu agent bootstrap
@@ -58,15 +59,15 @@ export function buildBootstrapScript(input: {
   :local id [/system identity get name]
   :local ver [/system resource get version]
   :local board [/system resource get board-name]
-  /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-cmd.rsc
-  :delay 1s
+  /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-hb.rsc
+  /tool fetch${fetchFlags(appUrl)} url="${runUrl}" dst-path=yobuyobu-cmd.rsc
+  :delay 2s
   :local ybcmd ""
   :do { :set ybcmd [/file get yobuyobu-cmd.rsc contents] } on-error={}
   :if ([:len $ybcmd] < 20) do={ :return }
   :if ([:pick $ybcmd 0 16] = "# yobuyobu idle") do={ :return }
-  /log warning "yobuyobu applying queued commands"
-  /import yobuyobu-cmd.rsc
-  /log warning "yobuyobu applied queued commands"
+  /log warning ("yobuyobu applying " . [:len $ybcmd] . " bytes")
+  :execute script=$ybcmd
 }
 /system scheduler add name=yobuyobu-agent interval=3s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive,ftp
 /system script run yobuyobu-agent
