@@ -1,0 +1,2 @@
+-- Applied remotely as replace_legacy_schema.
+-- Fresh operator, router, billing, and command-queue schema for Yobuyobu.

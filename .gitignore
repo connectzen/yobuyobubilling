@@ -1,0 +1,12 @@
+.next
+node_modules
+data
+.env
+.env.local
+.env*.local
+.vercel
+*.log
+.cursor
+cd4a.config.json
+scripts
+.tmp-db-pass.txt

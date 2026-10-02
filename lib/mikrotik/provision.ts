@@ -1,0 +1,74 @@
+export type RouterPort = {
+  name: string;
+  type: string;
+};
+
+function requireText(value: string, label: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`${label} is required`);
+  }
+  return trimmed;
+}
+
+function escapeRouterOs(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+export function buildProvisionOneLiner(input: {
+  appUrl: string;
+  token: string;
+}): string {
+  const appUrl = requireText(input.appUrl, "App URL").replace(/\/$/, "");
+  const token = requireText(input.token, "Token");
+  const url = `${appUrl}/provision/${encodeURIComponent(token)}`;
+  return `{/tool fetch mode=https url="${url}" dst-path=yobuyobu.rsc;:delay 2s;/import yobuyobu.rsc;}`;
+}
+
+export function buildBootstrapScript(input: {
+  appUrl: string;
+  token: string;
+  routerName: string;
+}): string {
+  const appUrl = requireText(input.appUrl, "App URL").replace(/\/$/, "");
+  const token = requireText(input.token, "Token");
+  const routerName = escapeRouterOs(requireText(input.routerName, "Router name"));
+  const syncUrl = `${appUrl}/api/agent/${token}/sync`;
+
+  return `
+# Yobuyobu agent bootstrap
+/system identity set name="${routerName}"
+/system script remove [find name="yobuyobu-agent"]
+/system scheduler remove [find name="yobuyobu-agent"]
+/system script add name=yobuyobu-agent policy=read,write,policy,test,sensitive source={
+  :local names ""
+  :foreach i in=[/interface find] do={
+    :set names ($names . [/interface get $i name] . ":" . [/interface get $i type] . ",")
+  }
+  :local id [/system identity get name]
+  :local ver [/system resource get version]
+  :local board [/system resource get board-name]
+  /tool fetch mode=https http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-cmd.rsc
+  :delay 1s
+  /import yobuyobu-cmd.rsc
+}
+/system scheduler add name=yobuyobu-agent interval=10s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive
+/system script run yobuyobu-agent
+`.trim();
+}
+
+export function parseInterfaceReport(report: string): RouterPort[] {
+  return report
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [name, type] = entry.split(":");
+      return { name: name ?? "", type: type || "unknown" };
+    })
+    .filter((port) => port.name.length > 0);
+}
+
+export function idleAgentScript(): string {
+  return "# yobuyobu idle\n";
+}
