@@ -2,7 +2,8 @@ export const UPLOAD_SUCCESS_MESSAGE =
   "Configuration queued. The MikroTik will apply it within about 3 seconds.";
 
 export type UploadBlockedInput = {
-  connected: boolean;
+  live: boolean;
+  everSeen: boolean;
   wan: string;
   customerPortCount: number;
   hotspot: boolean;
@@ -14,8 +15,10 @@ export type ConfigureApiResult =
   | { ok: false; message: string };
 
 export function uploadBlockedReason(input: UploadBlockedInput): string {
-  if (!input.connected) {
-    return "Waiting for this MikroTik to report its ports.";
+  if (!input.live) {
+    return input.everSeen
+      ? "MikroTik is offline. Paste provision again after a reset."
+      : "Waiting for this MikroTik to report its ports.";
   }
   if (!input.wan.trim()) {
     return "Pick the WAN port first.";

@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Router } from "@/lib/db";
 import { CopyBlock } from "@/components/copy-block";
 import { DeleteRouterButton } from "@/components/delete-router-button";
+import { LiveRefresh } from "@/components/live-refresh";
 import { customerLanPorts, normalizeRouterPorts } from "@/lib/mikrotik/services";
 import { readConfigureApiResult, uploadBlockedReason } from "@/lib/mikrotik/setup-ui";
+import { routerPresence } from "@/lib/routers/presence";
 
 export function RouterSetup({
   router,
@@ -38,22 +40,16 @@ export function RouterSetup({
     [router.interfaces],
   );
   const customerPorts = useMemo(() => customerLanPorts(wan, ports), [wan, ports]);
-  const connected = ports.length > 0;
+  const presence = routerPresence(router.last_seen_at);
+  const live = presence.live;
   const blocked = uploadBlockedReason({
-    connected,
+    live,
+    everSeen: Boolean(router.last_seen_at),
     wan,
     customerPortCount: customerPorts.length,
     hotspot,
     pppoe,
   });
-
-  useEffect(() => {
-    if (connected) {
-      return;
-    }
-    const timer = window.setInterval(() => nav.refresh(), 3000);
-    return () => window.clearInterval(timer);
-  }, [connected, nav]);
 
   async function applyConfig() {
     if (blocked) {
@@ -87,6 +83,7 @@ export function RouterSetup({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      <LiveRefresh />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
@@ -94,7 +91,9 @@ export function RouterSetup({
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">{router.name}</h1>
           <p className="mt-2 text-sm text-[#9aa3b2]">
-            Status: {router.status}
+            {presence.headline}
+            {` · ${presence.detail}`}
+            {router.status === "configured" ? " · Configured" : ""}
             {router.board_name ? ` · ${router.board_name}` : ""}
             {router.ros_version ? ` · ROS ${router.ros_version}` : ""}
           </p>
@@ -116,20 +115,20 @@ export function RouterSetup({
           queued commands), then Upload configuration.
         </p>
         <CopyBlock label="Copy provision" value={oneLiner} />
-        {connected ? (
+        {live ? (
           <p className="mt-3 text-sm text-emerald-400">
             Router is online. {ports.length} port{ports.length === 1 ? "" : "s"} reported.
+            {" · "}
+            {presence.detail}.
           </p>
         ) : (
-          <p className="mt-3 text-sm text-amber-300">
-            Waiting for the MikroTik to check in. Ports will appear here after it connects.
-          </p>
+          <p className="mt-3 text-sm text-amber-300">{presence.detail}</p>
         )}
       </section>
 
-      <section className={`card p-5 ${connected ? "" : "opacity-70"}`}>
+      <section className={`card p-5 ${live ? "" : "opacity-70"}`}>
         <h2 className="font-medium">2. Ports and services</h2>
-        {connected ? (
+        {live ? (
           <p className="mt-1 text-sm text-[#9aa3b2]">
             Choose the WAN port. Ethernet, SFP, and Wi-Fi all join the same Hotspot
             bridge. Phones connect to the SSID below.
@@ -137,7 +136,7 @@ export function RouterSetup({
         ) : (
           <p className="mt-1 text-sm text-[#9aa3b2]">
             Port lists stay empty until this MikroTik connects. Paste the provision script
-            first, then this section unlocks.
+            first, then this section unlocks. After a factory reset, paste provision again.
           </p>
         )}
         <div className="mt-4 grid gap-3">
@@ -145,11 +144,11 @@ export function RouterSetup({
             WAN
             <select
               className="mt-1 w-full"
-              disabled={!connected}
+              disabled={!live}
               value={wan}
               onChange={(event) => setWan(event.target.value)}
             >
-              <option value="">{connected ? "Select port" : "Waiting for MikroTik"}</option>
+              <option value="">{live ? "Select port" : "Waiting for MikroTik"}</option>
               {ports.map((port) => (
                 <option key={`wan-${port.name}`} value={port.name}>
                   {port.name} ({port.type})
@@ -157,7 +156,7 @@ export function RouterSetup({
               ))}
             </select>
           </label>
-          {connected && wan ? (
+          {live && wan ? (
             <div>
               <p className="text-sm">Customer ports (Hotspot and PPPoE)</p>
               <p className="mt-1 text-sm text-[#9aa3b2]">
@@ -171,7 +170,7 @@ export function RouterSetup({
             Wi-Fi name (SSID)
             <input
               className="mt-1 w-full"
-              disabled={!connected}
+              disabled={!live}
               maxLength={32}
               value={ssid}
               onChange={(event) => setSsid(event.target.value)}
@@ -183,7 +182,7 @@ export function RouterSetup({
           <label className="flex items-center gap-2">
             <input
               checked={hotspot}
-              disabled={!connected}
+              disabled={!live}
               type="checkbox"
               onChange={(event) => setHotspot(event.target.checked)}
             />
@@ -192,7 +191,7 @@ export function RouterSetup({
           <label className="flex items-center gap-2">
             <input
               checked={pppoe}
-              disabled={!connected}
+              disabled={!live}
               type="checkbox"
               onChange={(event) => setPppoe(event.target.checked)}
             />
@@ -201,7 +200,7 @@ export function RouterSetup({
           <label className="flex items-center gap-2">
             <input
               checked={antiShare}
-              disabled={!connected}
+              disabled={!live}
               type="checkbox"
               onChange={(event) => setAntiShare(event.target.checked)}
             />

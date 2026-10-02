@@ -1,19 +1,25 @@
 import Link from "next/link";
 import { getOperator } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { LiveRefresh } from "@/components/live-refresh";
+import { routerPresence } from "@/lib/routers/presence";
 
 export default async function OverviewPage() {
   const operator = await getOperator();
   const db = sql();
-  const [routers, plans, subscribers, payments] = await Promise.all([
-    db`select count(*)::int as n from routers where operator_id = ${operator!.id}`,
+  const [routerRows, plans, subscribers, payments] = await Promise.all([
+    db<{ last_seen_at: string | null }[]>`
+      select last_seen_at from routers where operator_id = ${operator!.id}
+    `,
     db`select count(*)::int as n from plans where operator_id = ${operator!.id}`,
     db`select count(*)::int as n from subscribers where operator_id = ${operator!.id} and status = 'active'`,
     db`select coalesce(sum(amount_kes), 0)::int as n from payments where operator_id = ${operator!.id} and status = 'success'`,
   ]);
 
+  const liveRouters = routerRows.filter((row) => routerPresence(row.last_seen_at).live).length;
+
   const cards = [
-    ["Routers", routers[0]?.n ?? 0, "Online MikroTik devices"],
+    ["Live routers", liveRouters, "MikroTik boxes checking in now"],
     ["Plans", plans[0]?.n ?? 0, "Speed and time packages"],
     ["Live subscribers", subscribers[0]?.n ?? 0, "Active access grants"],
     ["Paystack KES", payments[0]?.n ?? 0, "Confirmed collections"],
@@ -21,6 +27,7 @@ export default async function OverviewPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      <LiveRefresh />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">

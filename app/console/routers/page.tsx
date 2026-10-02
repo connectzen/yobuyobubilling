@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getOperator } from "@/lib/auth";
 import { sql, type Router } from "@/lib/db";
 import { DeleteRouterButton } from "@/components/delete-router-button";
+import { LiveRefresh } from "@/components/live-refresh";
+import { routerPresence } from "@/lib/routers/presence";
 
 export default async function RoutersPage() {
   const operator = await getOperator();
@@ -12,6 +14,7 @@ export default async function RoutersPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      <LiveRefresh />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
@@ -19,8 +22,8 @@ export default async function RoutersPage() {
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Routers</h1>
           <p className="mt-2 text-sm text-[#9aa3b2]">
-            Provision MikroTik, then push hotspot or PPPoE. Delete leftover test
-            boxes, then link the real one again.
+            Provision MikroTik, then push hotspot or PPPoE. Status follows the last
+            check-in. After a reset, paste provision again.
           </p>
         </div>
         <Link className="btn-primary" href="/console/routers/new">
@@ -32,7 +35,7 @@ export default async function RoutersPage() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Status</th>
+              <th>Live</th>
               <th>Services</th>
               <th>Last seen</th>
               <th></th>
@@ -46,27 +49,30 @@ export default async function RoutersPage() {
                 </td>
               </tr>
             ) : (
-              routers.map((router) => (
-                <tr key={router.id}>
-                  <td>
-                    <Link className="font-medium text-[#f5a524]" href={`/console/routers/${router.id}`}>
-                      {router.name}
-                    </Link>
-                  </td>
-                  <td className="capitalize">{router.status}</td>
-                  <td>
-                    {[router.hotspot_enabled && "Hotspot", router.pppoe_enabled && "PPPoE", router.anti_share_enabled && "Anti-sharing"]
-                      .filter(Boolean)
-                      .join(" · ") || "Not applied"}
-                  </td>
-                  <td className="text-[#9aa3b2]">
-                    {router.last_seen_at ? new Date(router.last_seen_at).toLocaleString() : "Waiting"}
-                  </td>
-                  <td className="text-right">
-                    <DeleteRouterButton id={router.id} name={router.name} />
-                  </td>
-                </tr>
-              ))
+              routers.map((router) => {
+                const presence = routerPresence(router.last_seen_at);
+                return (
+                  <tr key={router.id}>
+                    <td>
+                      <Link className="font-medium text-[#f5a524]" href={`/console/routers/${router.id}`}>
+                        {router.name}
+                      </Link>
+                    </td>
+                    <td className={presence.live ? "text-emerald-400" : "text-amber-300"}>
+                      {presence.headline}
+                    </td>
+                    <td>
+                      {[router.hotspot_enabled && "Hotspot", router.pppoe_enabled && "PPPoE", router.anti_share_enabled && "Anti-sharing"]
+                        .filter(Boolean)
+                        .join(" · ") || "Not applied"}
+                    </td>
+                    <td className="text-[#9aa3b2]">{presence.detail}</td>
+                    <td className="text-right">
+                      <DeleteRouterButton id={router.id} name={router.name} />
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

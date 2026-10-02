@@ -10,7 +10,8 @@ describe("router upload button feedback", () => {
   it("explains why upload cannot run yet", () => {
     assert.equal(
       uploadBlockedReason({
-        connected: false,
+        live: false,
+        everSeen: false,
         wan: "",
         customerPortCount: 0,
         hotspot: true,
@@ -20,7 +21,19 @@ describe("router upload button feedback", () => {
     );
     assert.equal(
       uploadBlockedReason({
-        connected: true,
+        live: false,
+        everSeen: true,
+        wan: "ether1",
+        customerPortCount: 8,
+        hotspot: true,
+        pppoe: true,
+      }),
+      "MikroTik is offline. Paste provision again after a reset.",
+    );
+    assert.equal(
+      uploadBlockedReason({
+        live: true,
+        everSeen: true,
         wan: "",
         customerPortCount: 8,
         hotspot: true,
@@ -30,7 +43,8 @@ describe("router upload button feedback", () => {
     );
     assert.equal(
       uploadBlockedReason({
-        connected: true,
+        live: true,
+        everSeen: true,
         wan: "ether1",
         customerPortCount: 0,
         hotspot: true,
@@ -40,7 +54,8 @@ describe("router upload button feedback", () => {
     );
     assert.equal(
       uploadBlockedReason({
-        connected: true,
+        live: true,
+        everSeen: true,
         wan: "ether1",
         customerPortCount: 8,
         hotspot: false,
@@ -50,7 +65,8 @@ describe("router upload button feedback", () => {
     );
     assert.equal(
       uploadBlockedReason({
-        connected: true,
+        live: true,
+        everSeen: true,
         wan: "ether1",
         customerPortCount: 8,
         hotspot: true,
