@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getOperator } from "@/lib/auth";
 import { sql, type Router } from "@/lib/db";
+import { DeleteRouterButton } from "@/components/delete-router-button";
 
 export default async function RoutersPage() {
   const operator = await getOperator();
@@ -18,7 +19,8 @@ export default async function RoutersPage() {
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Routers</h1>
           <p className="mt-2 text-sm text-[#9aa3b2]">
-            Provision MikroTik, then push hotspot or PPPoE.
+            Provision MikroTik, then push hotspot or PPPoE. Delete leftover test
+            boxes, then link the real one again.
           </p>
         </div>
         <Link className="btn-primary" href="/console/routers/new">
@@ -33,12 +35,13 @@ export default async function RoutersPage() {
               <th>Status</th>
               <th>Services</th>
               <th>Last seen</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {routers.length === 0 ? (
               <tr>
-                <td colSpan={4} className="text-[#9aa3b2]">
+                <td colSpan={5} className="text-[#9aa3b2]">
                   No routers yet. Link a MikroTik to get the paste-in script.
                 </td>
               </tr>
@@ -58,6 +61,9 @@ export default async function RoutersPage() {
                   </td>
                   <td className="text-[#9aa3b2]">
                     {router.last_seen_at ? new Date(router.last_seen_at).toLocaleString() : "Waiting"}
+                  </td>
+                  <td className="text-right">
+                    <DeleteRouterButton id={router.id} name={router.name} />
                   </td>
                 </tr>
               ))

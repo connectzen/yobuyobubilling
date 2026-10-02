@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Router } from "@/lib/db";
 import { CopyBlock } from "@/components/copy-block";
+import { DeleteRouterButton } from "@/components/delete-router-button";
 import { customerLanPorts, normalizeRouterPorts } from "@/lib/mikrotik/services";
 import { readConfigureApiResult, uploadBlockedReason } from "@/lib/mikrotik/setup-ui";
 
@@ -98,9 +99,12 @@ export function RouterSetup({
             {router.ros_version ? ` · ROS ${router.ros_version}` : ""}
           </p>
         </div>
-        <Link className="btn-ghost" href="/console/routers">
-          Back to routers
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link className="btn-ghost" href="/console/routers">
+            Back to routers
+          </Link>
+          <DeleteRouterButton id={router.id} name={router.name} />
+        </div>
       </div>
 
       <section className="card p-5">
