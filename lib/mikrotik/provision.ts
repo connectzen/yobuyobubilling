@@ -51,7 +51,7 @@ export function buildBootstrapScript(input: {
 /system identity set name="${routerName}"
 /system script remove [find name="yobuyobu-agent"]
 /system scheduler remove [find name="yobuyobu-agent"]
-/system script add name=yobuyobu-agent policy=read,write,policy,test,sensitive,ftp source={
+/system script add name=yobuyobu-agent policy=read,write,policy,test,password,sensitive,ftp source={
   :local names ""
   :foreach i in=[/interface find] do={
     :set names ($names . [/interface get $i name] . ":" . [/interface get $i type] . ",")
@@ -59,17 +59,19 @@ export function buildBootstrapScript(input: {
   :local id [/system identity get name]
   :local ver [/system resource get version]
   :local board [/system resource get board-name]
-  /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-hb.rsc
-  /tool fetch${fetchFlags(appUrl)} url="${runUrl}" dst-path=yobuyobu-cmd.rsc
-  :delay 2s
+  /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") output=none
+  :local ybrun [/tool fetch${fetchFlags(appUrl)} url="${runUrl}" output=user as-value]
   :local ybcmd ""
-  :do { :set ybcmd [/file get yobuyobu-cmd.rsc contents] } on-error={}
+  :do { :set ybcmd ($ybrun->"data") } on-error={}
+  :if ([:typeof $ybcmd] != "str") do={ :return }
   :if ([:len $ybcmd] < 20) do={ :return }
   :if ([:pick $ybcmd 0 16] = "# yobuyobu idle") do={ :return }
   /log warning ("yobuyobu applying " . [:len $ybcmd] . " bytes")
-  :execute script=$ybcmd
+  :local ybdo [:parse $ybcmd]
+  :do { $ybdo } on-error={ /log error "yobuyobu apply failed"; :return }
+  /tool fetch${fetchFlags(appUrl)} url="${runUrl}?done=1" output=none
 }
-/system scheduler add name=yobuyobu-agent interval=3s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive,ftp
+/system scheduler add name=yobuyobu-agent interval=3s on-event=yobuyobu-agent policy=read,write,policy,test,password,sensitive,ftp
 /system script run yobuyobu-agent
 `.trim();
 }
@@ -88,4 +90,12 @@ export function parseInterfaceReport(report: string): RouterPort[] {
 
 export function idleAgentScript(): string {
   return "# yobuyobu idle\n";
+}
+
+export function appendPendingCommands(bootstrap: string, pending: string): string {
+  const script = pending.trim();
+  if (!script || script.startsWith("# yobuyobu idle")) {
+    return bootstrap;
+  }
+  return `${bootstrap}\n/log warning "yobuyobu applying pending grants"\n${script}\n`;
 }

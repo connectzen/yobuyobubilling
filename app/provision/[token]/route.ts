@@ -1,7 +1,11 @@
 import { sql, type Router } from "@/lib/db";
 import { getAppUrl } from "@/lib/env";
 import { rsc } from "@/lib/api";
-import { buildBootstrapScript } from "@/lib/mikrotik/provision";
+import { peekQueuedCommandScript } from "@/lib/mikrotik/agent-commands";
+import {
+  appendPendingCommands,
+  buildBootstrapScript,
+} from "@/lib/mikrotik/provision";
 
 export async function GET(
   _request: Request,
@@ -16,11 +20,11 @@ export async function GET(
     return rsc("# unknown router");
   }
 
-  return rsc(
-    buildBootstrapScript({
-      appUrl: getAppUrl(),
-      token: router.token,
-      routerName: router.name,
-    }),
-  );
+  const bootstrap = buildBootstrapScript({
+    appUrl: getAppUrl(),
+    token: router.token,
+    routerName: router.name,
+  });
+  const pending = await peekQueuedCommandScript(router.id);
+  return rsc(appendPendingCommands(bootstrap, pending));
 }

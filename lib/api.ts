@@ -7,10 +7,12 @@ export function fail(message: string, status = 400) {
 }
 
 export function rsc(body: string) {
-  return new Response(body.endsWith("\n") ? body : `${body}\n`, {
+  const text = body.endsWith("\n") ? body : `${body}\n`;
+  return new Response(text, {
     headers: {
       "content-type": "text/plain; charset=utf-8",
       "cache-control": "no-store",
+      "content-length": String(Buffer.byteLength(text)),
     },
   });
 }

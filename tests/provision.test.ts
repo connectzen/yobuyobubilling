@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  appendPendingCommands,
   buildBootstrapScript,
   buildProvisionOneLiner,
+  idleAgentScript,
   parseInterfaceReport,
 } from "../lib/mikrotik/provision.ts";
 
@@ -45,14 +47,33 @@ describe("MikroTik provision scripts", () => {
     assert.match(script, /\/api\/agent\/tok_abc\/run/);
     assert.match(script, /interval=3s/);
     assert.match(script, /\/tool fetch check-certificate=no /);
-    assert.match(script, /dst-path=yobuyobu-cmd\.rsc/);
-    assert.match(script, /:execute script=\$ybcmd/);
+    assert.match(script, /output=user as-value/);
+    assert.match(script, /\(\$ybrun->"data"\)/);
+    assert.match(script, /:local ybdo \[:parse \$ybcmd\]/);
+    assert.match(script, /\/api\/agent\/tok_abc\/run\?done=1/);
+    assert.match(script, /policy=read,write,policy,test,password,sensitive,ftp/);
+    assert.doesNotMatch(script, /dst-path=yobuyobu-cmd\.rsc/);
+    assert.doesNotMatch(script, /:execute script=\$ybcmd/);
     assert.doesNotMatch(script, /\/import yobuyobu-cmd\.rsc/);
     assert.match(script, /# yobuyobu idle/);
     assert.doesNotMatch(script, /mode=/);
     assert.doesNotMatch(script, /check-certificate=yes/);
     assert.doesNotMatch(script, /interval=10s/);
     assert.doesNotMatch(script, /YOUR_|TODO|placeholder/i);
+  });
+
+  it("appends unpaid grants onto the paste-once bootstrap so Terminal import creates users", () => {
+    const bootstrap = buildBootstrapScript({
+      appUrl: "https://billing.yobuyobu.com",
+      token: "tok_abc",
+      routerName: "manyatta",
+    });
+    const grant = `/ip hotspot user add name=ybdeadbeef01 password=ybdeadbeef01 profile=yb-hotspot`;
+    const script = appendPendingCommands(bootstrap, grant);
+
+    assert.match(script, /\/system scheduler add name=yobuyobu-agent/);
+    assert.match(script, /\/ip hotspot user add name=ybdeadbeef01/);
+    assert.equal(appendPendingCommands(bootstrap, idleAgentScript()), bootstrap);
   });
 
   it("uses http fetch when the app url is not TLS", () => {

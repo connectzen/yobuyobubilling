@@ -1,12 +1,15 @@
 import { sql, type Router } from "@/lib/db";
 import { rsc } from "@/lib/api";
-import { takeQueuedCommandScript } from "@/lib/mikrotik/agent-commands";
+import {
+  ackQueuedCommands,
+  peekQueuedCommandScript,
+} from "@/lib/mikrotik/agent-commands";
 import { idleAgentScript } from "@/lib/mikrotik/provision";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { token: string } },
 ) {
   const db = sql();
@@ -19,7 +22,12 @@ export async function GET(
   }
 
   try {
-    return rsc(await takeQueuedCommandScript(router.id));
+    const done = new URL(request.url).searchParams.get("done") === "1";
+    if (done) {
+      await ackQueuedCommands(router.id);
+      return rsc(idleAgentScript());
+    }
+    return rsc(await peekQueuedCommandScript(router.id));
   } catch {
     return rsc(idleAgentScript());
   }
