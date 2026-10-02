@@ -109,10 +109,9 @@ export function RouterSetup({
       <section className="card p-5">
         <h2 className="font-medium">1. Provision</h2>
         <p className="mt-1 text-sm text-[#9aa3b2]">
-          Open Winbox → New Terminal, copy this one-liner, paste it, and press Enter. The
-          router downloads its agent and starts polling Yobuyobu. If Upload does not create
-          a bridge in Winbox, paste this one-liner again (the agent must be able to run
-          queued commands), then Upload configuration.
+          Open Winbox → New Terminal, copy this one-liner, paste it, and press Enter. It
+          installs the agent and creates any paid Hotspot users that are waiting. There is
+          no license prompt and no file import. Do not click Upload until Users appear.
         </p>
         <CopyBlock label="Copy provision" value={oneLiner} />
         {live ? (

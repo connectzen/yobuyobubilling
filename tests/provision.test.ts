@@ -9,7 +9,7 @@ import {
 } from "../lib/mikrotik/provision.ts";
 
 describe("MikroTik provision scripts", () => {
-  it("builds a one-liner that fetches and imports the bootstrap file", () => {
+  it("builds a one-liner that applies bootstrap in memory without /import", () => {
     const line = buildProvisionOneLiner({
       appUrl: "https://billing.yobuyobu.com",
       token: "tok_abc",
@@ -18,8 +18,10 @@ describe("MikroTik provision scripts", () => {
     assert.match(line, /^\{/);
     assert.match(line, /\/tool fetch check-certificate=no /);
     assert.match(line, /url="https:\/\/billing\.yobuyobu\.com\/provision\/tok_abc"/);
-    assert.match(line, /dst-path=yobuyobu\.rsc/);
-    assert.match(line, /\/import yobuyobu\.rsc/);
+    assert.match(line, /output=user as-value/);
+    assert.match(line, /:local ybd \[:parse \$ybs\]/);
+    assert.doesNotMatch(line, /dst-path=/);
+    assert.doesNotMatch(line, /\/import /);
     assert.doesNotMatch(line, /mode=/);
     assert.doesNotMatch(line, /check-certificate=yes/);
   });

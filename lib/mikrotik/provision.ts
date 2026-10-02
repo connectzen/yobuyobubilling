@@ -32,7 +32,7 @@ export function buildProvisionOneLiner(input: {
   const appUrl = requireText(input.appUrl, "App URL").replace(/\/$/, "");
   const token = requireText(input.token, "Token");
   const url = `${appUrl}/provision/${encodeURIComponent(token)}`;
-  return `{/tool fetch${fetchFlags(appUrl)} url="${url}" dst-path=yobuyobu.rsc; :delay 2s; /import yobuyobu.rsc;}`;
+  return `{:local yb [/tool fetch${fetchFlags(appUrl)} url="${url}" output=user as-value]; :local ybs ($yb->"data"); :local ybd [:parse $ybs]; $ybd}`;
 }
 
 export function buildBootstrapScript(input: {
