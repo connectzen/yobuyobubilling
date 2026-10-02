@@ -39,6 +39,14 @@ export function clientMacFromQuery(params: {
   }
 }
 
+export function clientIpFromQuery(params: { ip?: string }): string {
+  const raw = (params.ip ?? "").trim();
+  if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(raw)) {
+    return "";
+  }
+  return raw;
+}
+
 export function buildHotspotHtml(file: string, input: HotspotHtmlInput): string {
   if (!isHotspotHtmlFile(file)) {
     throw new Error("Unknown hotspot file");

@@ -14,4 +14,12 @@ describe("captive portal buy form", () => {
     assert.doesNotMatch(source, /placeholder="\+254/);
     assert.doesNotMatch(source, /placeholder="254/);
   });
+
+  it("logs the phone into MikroTik after payment instead of only showing a message", () => {
+    assert.match(source, /hotspotPapLoginUrl/);
+    assert.match(source, /connectPhone/);
+    assert.match(source, /location\.replace/);
+    assert.match(source, /Connecting you now/);
+    assert.doesNotMatch(source, /You can close this page/);
+  });
 });

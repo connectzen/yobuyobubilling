@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { sql, type Plan, type Router } from "@/lib/db";
 import { BuyForm } from "@/components/buy-form";
-import { clientMacFromQuery } from "@/lib/mikrotik/hotspot-html";
+import { clientIpFromQuery, clientMacFromQuery } from "@/lib/mikrotik/hotspot-html";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -38,6 +38,7 @@ export default async function BuyPage({
         <BuyForm
           token={router.token}
           macAddress={clientMacFromQuery(searchParams)}
+          ipAddress={clientIpFromQuery(searchParams)}
           plans={plans.map((plan) => ({
             id: plan.id,
             name: plan.name,

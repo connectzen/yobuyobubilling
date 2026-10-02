@@ -136,7 +136,7 @@ describe("MikroTik service configuration", () => {
       antiShare: true,
     });
 
-    assert.match(script, /login-by="http-chap,http-pap,mac-cookie"/);
+    assert.match(script, /login-by="http-pap,mac-cookie,http-chap"/);
     assert.match(script, /authentication="pap,chap,mschap2"/);
     assert.match(script, /interface list member add list=LAN interface=yb-lan/);
     assert.match(script, /interface list member add list=WAN interface=ether1/);
@@ -167,7 +167,7 @@ describe("MikroTik service configuration", () => {
     assert.match(script, /url="https:\/\/safisaana\.com\/hotspot\/tok_abc\/error\.html"/);
     assert.match(script, /walled-garden add dst-host=safisaana\.com comment=yobuyobu-buy/);
     assert.match(script, /walled-garden ip add dst-host=safisaana\.com action=accept comment=yobuyobu-buy/);
-    assert.match(script, /login-by="http-chap,http-pap,mac-cookie"/);
+    assert.match(script, /login-by="http-pap,mac-cookie,http-chap"/);
     assert.doesNotMatch(script, /mode=https/);
     assert.doesNotMatch(script, /check-certificate=yes/);
   });

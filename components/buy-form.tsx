@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { hotspotPapLoginUrl } from "@/lib/mikrotik/hotspot-login";
 import { formatDuration } from "@/lib/billing/duration";
 
 type Grant = {
@@ -12,16 +13,25 @@ type Grant = {
 export function BuyForm({
   token,
   macAddress,
+  ipAddress,
   plans,
 }: {
   token: string;
   macAddress: string;
+  ipAddress: string;
   plans: { id: string; name: string; priceKes: number; durationMinutes: number }[];
 }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [reference, setReference] = useState("");
   const [grant, setGrant] = useState<Grant | null>(null);
+
+  function connectPhone(username: string, password: string) {
+    const login = hotspotPapLoginUrl(username, password);
+    window.setTimeout(() => {
+      window.location.replace(login);
+    }, 4000);
+  }
 
   useEffect(() => {
     if (!reference || grant) {
@@ -36,11 +46,8 @@ export function BuyForm({
           password: payload.data.password,
           expiresAt: payload.data.expiresAt,
         });
-        setMessage(
-          macAddress
-            ? "Payment confirmed. This phone is being opened on the network now."
-            : "Payment confirmed. Open a website to finish connecting.",
-        );
+        setMessage("Payment confirmed. Connecting you now…");
+        connectPhone(payload.data.username, payload.data.password);
       }
       if (payload.success && payload.data.status === "failed") {
         setError("Payment failed. Try again.");
@@ -48,7 +55,7 @@ export function BuyForm({
       }
     }, 2000);
     return () => window.clearInterval(timer);
-  }, [grant, macAddress, reference]);
+  }, [grant, reference]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,6 +71,7 @@ export function BuyForm({
         phone: String(formData.get("mpesa") ?? ""),
         planId: String(formData.get("planId") ?? ""),
         macAddress,
+        ipAddress,
       }),
     });
     const payload = await response.json();
@@ -79,6 +87,8 @@ export function BuyForm({
         password: payload.data.password,
         expiresAt: payload.data.expiresAt,
       });
+      setMessage("Payment confirmed. Connecting you now…");
+      connectPhone(payload.data.username, payload.data.password);
     }
   }
 
@@ -107,10 +117,9 @@ export function BuyForm({
       </select>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       {message ? <p className="text-sm text-emerald-400">{message}</p> : null}
-      {grant && macAddress ? (
+      {grant ? (
         <p className="text-sm text-[#9aa3b2]">
-          You can close this page and browse. If a site still asks you to sign in, open it
-          again after a few seconds.
+          Stay on this Wi-Fi. The sign-in page will close when MikroTik opens the line.
         </p>
       ) : null}
       {!macAddress ? (

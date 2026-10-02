@@ -12,6 +12,7 @@ export async function startPackageCharge(input: {
   name: string;
   phone: string;
   macAddress?: string;
+  ipAddress?: string;
 }) {
   const displayPhone = kenyaPhoneDisplay(input.phone);
   const mpesaPhone = kenyaMpesaPhone(input.phone);
@@ -53,7 +54,7 @@ export async function startPackageCharge(input: {
   }
 
   if (isChargeSuccessful(payload)) {
-    const grant = await applySuccessfulPayment(reference);
+    const grant = await applySuccessfulPayment(reference, { ipAddress: input.ipAddress });
     return {
       reference,
       granted: true,

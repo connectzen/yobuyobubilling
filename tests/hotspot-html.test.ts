@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   buildHotspotHtml,
   clientMacFromQuery,
+  clientIpFromQuery,
   HOTSPOT_HTML_FILES,
   hotspotTemplateUrl,
 } from "../lib/mikrotik/hotspot-html.ts";
@@ -68,6 +69,9 @@ describe("MikroTik hotspot login HTML", () => {
     assert.equal(clientMacFromQuery({ mac: "", "identity-mac": "11:22:33:44:55:66" }), "11:22:33:44:55:66");
     assert.equal(clientMacFromQuery({ mac: "AABBCCDDEEFF" }), "AA:BB:CC:DD:EE:FF");
     assert.equal(clientMacFromQuery({}), "");
+    assert.equal(clientIpFromQuery({ ip: "10.10.0.50" }), "10.10.0.50");
+    assert.equal(clientIpFromQuery({ ip: "$(ip)" }), "");
+    assert.equal(clientIpFromQuery({}), "");
   });
 
   it("does not pull Node crypto into the Wi-Fi setup page", () => {

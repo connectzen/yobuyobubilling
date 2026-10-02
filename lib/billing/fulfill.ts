@@ -9,6 +9,7 @@ export async function fulfillPaidAccess(input: {
   name: string;
   phone: string;
   macAddress?: string;
+  ipAddress?: string;
 }) {
   const db = sql();
   const [router] = await db<Router[]>`
@@ -44,6 +45,7 @@ export async function fulfillPaidAccess(input: {
     username,
     password,
     macAddress,
+    ipAddress: input.ipAddress,
   });
 
   const rows = await db<{ id: string }[]>`
@@ -63,7 +65,10 @@ export async function fulfillPaidAccess(input: {
   return { subscriberId: rows[0].id, username, password, expiresAt: grant.expiresAt };
 }
 
-export async function applySuccessfulPayment(reference: string) {
+export async function applySuccessfulPayment(
+  reference: string,
+  extra?: { ipAddress?: string },
+) {
   const db = sql();
   const rows = await db<{
     id: string;
@@ -105,6 +110,7 @@ export async function applySuccessfulPayment(reference: string) {
     name: payment.customer_name,
     phone: payment.phone,
     macAddress: payment.mac_address ?? undefined,
+    ipAddress: extra?.ipAddress,
   });
   await db`
     update payments

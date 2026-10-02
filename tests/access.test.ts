@@ -51,13 +51,16 @@ describe("package access", () => {
       serviceType: "hotspot",
       username: "ybab12cd34",
       macAddress: "aabbccddeeff",
+      ipAddress: "10.10.0.50",
     });
 
     assert.match(grant.script, /mac-address=AA:BB:CC:DD:EE:FF/);
     assert.match(grant.script, /type=bypassed/);
-    assert.match(grant.script, /\/ip hotspot host remove \[find mac-address="AA:BB:CC:DD:EE:FF"\]/);
-    assert.match(grant.script, /\/ip hotspot active login user=ybab12cd34 password=ybab12cd34 mac-address=AA:BB:CC:DD:EE:FF/);
+    assert.match(grant.script, /\/ip hotspot active login user=ybab12cd34 password=ybab12cd34 mac-address=AA:BB:CC:DD:EE:FF ip=10.10.0.50/);
     assert.match(grant.script, /:do \{ \/ip hotspot ip-binding add/);
+    assert.doesNotMatch(grant.script, /server=yb-hotspot/);
+    assert.doesNotMatch(grant.script, /\/ip hotspot host remove/);
+    assert.doesNotMatch(grant.script, /\/ip hotspot cookie add/);
   });
 
   it("normalizes compact and hyphen MAC addresses", () => {

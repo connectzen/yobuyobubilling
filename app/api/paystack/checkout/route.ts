@@ -9,6 +9,7 @@ export async function POST(request: Request) {
   const phone = String(body?.phone ?? "").replace(/\s+/g, "");
   const planId = String(body?.planId ?? "");
   const macAddress = String(body?.macAddress ?? "").trim() || undefined;
+  const ipAddress = String(body?.ipAddress ?? "").trim() || undefined;
   if (!token || !phone || !planId) {
     return fail("Phone, package, and router token are required");
   }
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
       name,
       phone,
       macAddress,
+      ipAddress,
     });
     return ok(result);
   } catch (error) {

@@ -192,7 +192,7 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
       tryDo(`/ip dhcp-server add name=yb-hotspot interface=${LAN_BRIDGE} address-pool=yb-hotspot authoritative=yes disabled=no`),
       tryDo(`/ip dhcp-server network add address=10.10.0.0/24 gateway=10.10.0.1 dns-server=1.1.1.1,8.8.8.8 comment=yobuyobu-hotspot`),
       tryDo(`/ip hotspot profile remove [find name="yb-hotspot"]`),
-      tryDo(`/ip hotspot profile add name=yb-hotspot hotspot-address=10.10.0.1 dns-name=hotspot.yobuyobu html-directory=hotspot login-by="http-chap,http-pap,mac-cookie"`),
+      tryDo(`/ip hotspot profile add name=yb-hotspot hotspot-address=10.10.0.1 dns-name=hotspot.yobuyobu html-directory=hotspot login-by="http-pap,mac-cookie,http-chap"`),
       tryDo(`/ip hotspot user profile remove [find name="yb-hotspot"]`),
       tryDo(`/ip hotspot user profile add name=yb-hotspot shared-users=${input.antiShare ? "1" : "2"} rate-limit=${rosValue("10M/2M")}`),
       tryDo(`/ip hotspot add name=yb-hotspot interface=${LAN_BRIDGE} address-pool=yb-hotspot profile=yb-hotspot disabled=no`),

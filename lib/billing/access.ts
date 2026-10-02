@@ -14,10 +14,19 @@ export type GrantAccessInput = {
   username: string;
   password?: string;
   macAddress?: string;
+  ipAddress?: string;
 };
 
 function tryDo(command: string): string {
   return `:do { ${command} } on-error={}`;
+}
+
+function normalizeClientIp(value?: string): string | undefined {
+  const raw = (value ?? "").trim();
+  if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(raw)) {
+    return undefined;
+  }
+  return raw;
 }
 
 export function grantAccess(input: GrantAccessInput) {
@@ -29,6 +38,7 @@ export function grantAccess(input: GrantAccessInput) {
   const rate = `${input.downloadKbps}k/${input.uploadKbps}k`;
   const password = input.password ?? input.username;
   const mac = normalizeMac(input.macAddress);
+  const ip = normalizeClientIp(input.ipAddress);
 
   const lines =
     input.serviceType === "pppoe"
@@ -39,6 +49,7 @@ export function grantAccess(input: GrantAccessInput) {
           ),
         ]
       : [
+          `/log warning "yobuyobu grant ${input.username} ${mac ?? "nomac"} ${ip ?? "noip"}"`,
           tryDo(`/ip hotspot user remove [find name="${input.username}"]`),
           tryDo(
             `/ip hotspot user add name=${input.username} password=${password} profile=yb-hotspot rate-limit=${rate}`,
@@ -49,15 +60,16 @@ export function grantAccess(input: GrantAccessInput) {
     lines.push(
       tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
       tryDo(
-        `/ip hotspot ip-binding add mac-address=${mac} type=bypassed server=yb-hotspot comment="yb-${input.username}"`,
+        `/ip hotspot ip-binding add mac-address=${mac} type=bypassed comment="yb-${input.username}"`,
       ),
-      tryDo(`/ip hotspot cookie remove [find mac-address="${mac}"]`),
-      tryDo(`/ip hotspot cookie add mac-address=${mac} user=${input.username}`),
-      tryDo(
-        `/ip hotspot active login user=${input.username} password=${password} mac-address=${mac}`,
-      ),
-      tryDo(`/ip hotspot host remove [find mac-address="${mac}"]`),
     );
+    if (ip) {
+      lines.push(
+        tryDo(
+          `/ip hotspot active login user=${input.username} password=${password} mac-address=${mac} ip=${ip}`,
+        ),
+      );
+    }
   }
 
   return { expiresAt, script: lines.join("\n"), rate };
