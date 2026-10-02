@@ -91,7 +91,7 @@ export function BuyForm({
           type="tel"
           inputMode="numeric"
           autoComplete="off"
-          maxLength={10}
+          maxLength={13}
           placeholder="0712345678"
           required
           className="mt-1 w-full"

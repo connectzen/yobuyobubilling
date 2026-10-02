@@ -22,6 +22,13 @@ export function toPaystackAmount(kes: number): number {
   return Math.round(kes * 100);
 }
 
+export function paystackChargeError(message?: string): string {
+  if (/invalid phone number format/i.test(message ?? "")) {
+    return "Enter a Kenyan M-PESA number starting with 07";
+  }
+  return message?.trim() || "Paystack charge failed";
+}
+
 export function isChargeSuccessful(payload: {
   data?: { status?: string };
 }): boolean {

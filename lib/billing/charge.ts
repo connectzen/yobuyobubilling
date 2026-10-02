@@ -1,6 +1,6 @@
 import { sql, type Plan, type Router } from "../db";
 import { getPaystackSecret } from "../env";
-import { isChargeSuccessful, toPaystackAmount } from "../paystack";
+import { isChargeSuccessful, toPaystackAmount, paystackChargeError } from "../paystack";
 import { applySuccessfulPayment } from "./fulfill";
 import { kenyaMpesaPhone, kenyaPhoneDisplay } from "./kenya-phone";
 import { normalizeMac } from "./access";
@@ -39,7 +39,7 @@ export async function startPackageCharge(input: {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      email: `${mpesaPhone}@customers.yobuyobu.com`,
+      email: `${mpesaPhone.replace(/^\+/, "")}@customers.yobuyobu.com`,
       amount: String(toPaystackAmount(input.plan.price_kes)),
       currency: "KES",
       reference,
@@ -49,7 +49,7 @@ export async function startPackageCharge(input: {
   const payload = await charge.json();
   if (!charge.ok || !payload.status) {
     await db`update payments set status = 'failed' where reference = ${reference}`;
-    throw new Error(payload.message ?? "Paystack charge failed");
+    throw new Error(paystackChargeError(payload.message));
   }
 
   if (isChargeSuccessful(payload)) {

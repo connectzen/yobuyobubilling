@@ -19,5 +19,5 @@ function kenyaPhoneParts(value: string): { display: string; mpesa: string } {
   if (!/^07\d{8}$/.test(national)) {
     throw new Error("Enter a Kenyan M-PESA number starting with 07");
   }
-  return { display: national, mpesa: `254${national.slice(1)}` };
+  return { display: national, mpesa: `+254${national.slice(1)}` };
 }

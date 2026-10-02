@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
-import { isChargeSuccessful, verifyPaystackSignature } from "../lib/paystack.ts";
+import { isChargeSuccessful, paystackChargeError, verifyPaystackSignature } from "../lib/paystack.ts";
 
 describe("Paystack webhook signature", () => {
   it("accepts a matching HMAC SHA512 signature", () => {
@@ -21,5 +21,13 @@ describe("Paystack webhook signature", () => {
     const body = JSON.stringify({ event: "charge.success" });
     assert.equal(verifyPaystackSignature(body, "", "sk_test_example"), false);
     assert.equal(verifyPaystackSignature(body, "deadbeef", "sk_test_example"), false);
+  });
+
+  it("rewrites Paystack phone format errors for Kenya 07 numbers", () => {
+    assert.equal(
+      paystackChargeError("Invalid phone number format"),
+      "Enter a Kenyan M-PESA number starting with 07",
+    );
+    assert.equal(paystackChargeError(""), "Paystack charge failed");
   });
 });
