@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Router } from "@/lib/db";
 import { CopyBlock } from "@/components/copy-block";
+import { customerLanPorts } from "@/lib/mikrotik/services";
 
 export function RouterSetup({
   router,
@@ -19,13 +20,13 @@ export function RouterSetup({
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [wan, setWan] = useState(router.wan_interface ?? "");
-  const [lan, setLan] = useState(router.lan_interface ?? "");
   const [hotspot, setHotspot] = useState(router.hotspot_enabled);
   const [pppoe, setPppoe] = useState(router.pppoe_enabled);
   const [antiShare, setAntiShare] = useState(
     router.status === "configured" ? router.anti_share_enabled : true,
   );
   const ports = useMemo(() => router.interfaces ?? [], [router.interfaces]);
+  const customerPorts = useMemo(() => customerLanPorts(wan, ports), [wan, ports]);
   const connected = ports.length > 0;
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function RouterSetup({
     const response = await fetch(`/api/routers/${router.id}/configure`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ wanInterface: wan, lanInterface: lan, hotspot, pppoe, antiShare }),
+      body: JSON.stringify({ wanInterface: wan, hotspot, pppoe, antiShare }),
     });
     const payload = await response.json();
     setPending(false);
@@ -94,8 +95,7 @@ export function RouterSetup({
         <h2 className="font-medium">2. Ports and services</h2>
         {connected ? (
           <p className="mt-1 text-sm text-[#9aa3b2]">
-            Select WAN and LAN from the ports this MikroTik reported, then choose Hotspot,
-            PPPoE, and anti-sharing.
+            Choose the WAN port. Every remaining port joins Hotspot and PPPoE.
           </p>
         ) : (
           <p className="mt-1 text-sm text-[#9aa3b2]">
@@ -103,7 +103,7 @@ export function RouterSetup({
             first, then this section unlocks.
           </p>
         )}
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid gap-3">
           <label className="text-sm">
             WAN
             <select
@@ -120,22 +120,16 @@ export function RouterSetup({
               ))}
             </select>
           </label>
-          <label className="text-sm">
-            LAN
-            <select
-              className="mt-1 w-full"
-              disabled={!connected}
-              value={lan}
-              onChange={(event) => setLan(event.target.value)}
-            >
-              <option value="">{connected ? "Select port" : "Waiting for MikroTik"}</option>
-              {ports.map((port) => (
-                <option key={`lan-${port.name}`} value={port.name}>
-                  {port.name} ({port.type})
-                </option>
-              ))}
-            </select>
-          </label>
+          {connected && wan ? (
+            <div>
+              <p className="text-sm">Customer ports (Hotspot and PPPoE)</p>
+              <p className="mt-1 text-sm text-[#9aa3b2]">
+                {customerPorts.length > 0
+                  ? customerPorts.join(", ")
+                  : "No remaining ports. Pick a different WAN."}
+              </p>
+            </div>
+          ) : null}
         </div>
         <div className="mt-4 flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">
@@ -176,7 +170,7 @@ export function RouterSetup({
           </Link>
           <button
             className="btn-primary"
-            disabled={pending || !connected}
+            disabled={pending || !connected || !wan || customerPorts.length === 0}
             type="button"
             onClick={applyConfig}
           >
