@@ -24,6 +24,7 @@ describe("package access", () => {
     assert.match(grant.script, /\/ip hotspot user add/);
     assert.match(grant.script, /name=hs-1001/);
     assert.match(grant.script, /rate-limit=10240k\/2048k/);
+    assert.match(grant.script, /limit-uptime=1h/);
   });
 
   it("writes a PPPoE secret for PPPoE grants", () => {
@@ -40,6 +41,7 @@ describe("package access", () => {
     assert.match(grant.script, /\/ppp secret add/);
     assert.match(grant.script, /name=cust-22/);
     assert.match(grant.script, /password=secret22/);
+    assert.match(grant.script, /limit-uptime=1d/);
   });
 
   it("bypasses and logs in the hotspot client immediately when a MAC is known", () => {

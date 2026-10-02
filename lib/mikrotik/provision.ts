@@ -64,11 +64,9 @@ export function buildBootstrapScript(input: {
   :do { :set ybcmd [/file get yobuyobu-cmd.rsc contents] } on-error={}
   :if ([:len $ybcmd] < 20) do={ :return }
   :if ([:pick $ybcmd 0 16] = "# yobuyobu idle") do={ :return }
-  /log info "yobuyobu applying queued commands"
-  :do { /system script remove [find name="yobuyobu-run"] } on-error={}
-  /system script add name=yobuyobu-run policy=read,write,policy,test,sensitive,ftp source=$ybcmd
-  /system script run yobuyobu-run
-  :do { /system script remove [find name="yobuyobu-run"] } on-error={}
+  /log warning "yobuyobu applying queued commands"
+  /import yobuyobu-cmd.rsc
+  /log warning "yobuyobu applied queued commands"
 }
 /system scheduler add name=yobuyobu-agent interval=3s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive,ftp
 /system script run yobuyobu-agent

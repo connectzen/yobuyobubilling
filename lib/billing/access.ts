@@ -21,6 +21,16 @@ function tryDo(command: string): string {
   return `:do { ${command} } on-error={}`;
 }
 
+function rosLimitUptime(minutes: number): string {
+  if (minutes % 1440 === 0) {
+    return `${minutes / 1440}d`;
+  }
+  if (minutes % 60 === 0) {
+    return `${minutes / 60}h`;
+  }
+  return `${minutes}m`;
+}
+
 function normalizeClientIp(value?: string): string | undefined {
   const raw = (value ?? "").trim();
   if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(raw)) {
@@ -44,16 +54,12 @@ export function grantAccess(input: GrantAccessInput) {
     input.serviceType === "pppoe"
       ? [
           tryDo(`/ppp secret remove [find name="${input.username}"]`),
-          tryDo(
-            `/ppp secret add name=${input.username} password=${password} service=pppoe profile=yb-pppoe`,
-          ),
+          `/ppp secret add name=${input.username} password=${password} service=pppoe profile=yb-pppoe limit-uptime=${rosLimitUptime(input.durationMinutes)}`,
         ]
       : [
-          `/log warning "yobuyobu grant ${input.username} ${mac ?? "nomac"} ${ip ?? "noip"}"`,
+          `/log warning "yobuyobu paid ${input.username} ${rosLimitUptime(input.durationMinutes)} ${mac ?? "nomac"} ${ip ?? "noip"}"`,
           tryDo(`/ip hotspot user remove [find name="${input.username}"]`),
-          tryDo(
-            `/ip hotspot user add name=${input.username} password=${password} profile=yb-hotspot rate-limit=${rate}`,
-          ),
+          `/ip hotspot user add name=${input.username} password=${password} profile=yb-hotspot rate-limit=${rate} limit-uptime=${rosLimitUptime(input.durationMinutes)} disabled=no`,
         ];
 
   if (mac && input.serviceType === "hotspot") {
