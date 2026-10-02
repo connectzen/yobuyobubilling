@@ -1,15 +1,16 @@
 import { cookies } from "next/headers";
 import { hashPassword, sessionCookie } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { normalizeOperatorEmail } from "@/lib/email";
 import { fail, ok } from "@/lib/api";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const email = String(body?.email ?? "").trim().toLowerCase();
+  const email = normalizeOperatorEmail(String(body?.email ?? ""));
   const password = String(body?.password ?? "");
   const name = String(body?.name ?? "").trim();
   if (!email || !name || password.length < 8) {
-    return fail("Name, email, and an 8+ character password are required");
+    return fail("Name, a valid email, and an 8+ character password are required");
   }
 
   const db = sql();

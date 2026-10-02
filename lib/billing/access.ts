@@ -8,6 +8,7 @@ export type GrantAccessInput = {
   serviceType: ServiceType;
   username: string;
   password?: string;
+  macAddress?: string;
 };
 
 export function grantAccess(input: GrantAccessInput) {
@@ -21,25 +22,37 @@ export function grantAccess(input: GrantAccessInput) {
   const rate = `${input.downloadKbps}k/${input.uploadKbps}k`;
   const password = input.password ?? input.username;
 
-  const script =
+  const mac = normalizeMac(input.macAddress);
+  const lines =
     input.serviceType === "pppoe"
       ? [
           `/ppp secret remove [find name="${input.username}"]`,
           `/ppp secret add name=${input.username} password=${password} service=pppoe profile=yb-pppoe`,
-        ].join("\n")
+        ]
       : [
           `/ip hotspot user remove [find name="${input.username}"]`,
           `/ip hotspot user add name=${input.username} password=${password} profile=yb-hotspot rate-limit=${rate}`,
-        ].join("\n");
+        ];
 
-  return { expiresAt, script, rate };
+  if (mac && input.serviceType === "hotspot") {
+    lines.push(
+      `/ip hotspot ip-binding remove [find mac-address="${mac}"]`,
+      `/ip hotspot ip-binding add mac-address=${mac} type=bypassed comment="yb-${input.username}"`,
+    );
+  }
+
+  return { expiresAt, script: lines.join("\n"), rate };
 }
 
 export function isExpired(expiresAt: Date, now: Date): boolean {
   return now.getTime() >= expiresAt.getTime();
 }
 
-export function kickScript(username: string, serviceType: ServiceType): string {
+export function kickScript(
+  username: string,
+  serviceType: ServiceType,
+  macAddress?: string,
+): string {
   if (serviceType === "pppoe") {
     return [
       `/ppp active remove [find name="${username}"]`,
@@ -47,8 +60,32 @@ export function kickScript(username: string, serviceType: ServiceType): string {
     ].join("\n");
   }
 
-  return [
+  const lines = [
     `/ip hotspot active remove [find user="${username}"]`,
     `/ip hotspot user disable [find name="${username}"]`,
-  ].join("\n");
+  ];
+  const mac = normalizeMac(macAddress);
+  if (mac) {
+    lines.push(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`);
+  }
+  return lines.join("\n");
+}
+
+export function usernameFromPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 9) {
+    throw new Error("Phone number is required");
+  }
+  return digits;
+}
+
+export function normalizeMac(value?: string): string | undefined {
+  const mac = (value ?? "").trim().toUpperCase();
+  if (!mac) {
+    return undefined;
+  }
+  if (!/^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}$/.test(mac)) {
+    throw new Error("MAC address is invalid");
+  }
+  return mac.replace(/-/g, ":");
 }

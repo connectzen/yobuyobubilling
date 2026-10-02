@@ -17,6 +17,19 @@ describe("MikroTik service configuration", () => {
     assert.doesNotMatch(script, /pppoe-server/);
   });
 
+  it("locks hotspot accounts to one session when anti-sharing is on", () => {
+    const script = buildServiceConfigScript({
+      wanInterface: "ether1",
+      lanInterface: "ether2",
+      hotspot: true,
+      pppoe: false,
+      antiShare: true,
+    });
+
+    assert.match(script, /name=yb-hotspot shared-users=1/);
+    assert.doesNotMatch(script, /shared-users=2/);
+  });
+
   it("configures PPPoE and anti-sharing together", () => {
     const script = buildServiceConfigScript({
       wanInterface: "ether1",

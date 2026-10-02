@@ -28,18 +28,33 @@ export default function NewRouterPage() {
   }
 
   return (
-    <div className="max-w-xl">
-      <p className="text-xs uppercase tracking-[0.2em] text-accent">Identity</p>
-      <h1 className="mt-2 text-2xl font-semibold">Link a MikroTik</h1>
-      <p className="mt-2 text-sm text-zinc-400">
+    <div className="mx-auto max-w-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">Identity</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Link a MikroTik</h1>
+        </div>
+        <button className="btn-ghost" type="button" onClick={() => router.push("/console/routers")}>
+          Back
+        </button>
+      </div>
+      <p className="mt-2 text-sm text-[#9aa3b2]">
         Name the router, then paste the provision script into Winbox Terminal.
       </p>
-      <form onSubmit={onSubmit} className="mt-6 space-y-3">
-        <input name="name" placeholder="Manyatta AP 1" required className="w-full" />
+      <form onSubmit={onSubmit} className="card mt-8 space-y-3 p-6">
+        <label>
+          Router name
+          <input name="name" placeholder="Manyatta AP 1" required className="mt-1 w-full" />
+        </label>
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
-        <button className="btn-primary" disabled={pending} type="submit">
-          {pending ? "Creating..." : "Create provision script"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-ghost" type="button" onClick={() => router.push("/console/routers")}>
+            Cancel
+          </button>
+          <button className="btn-primary" disabled={pending} type="submit">
+            {pending ? "Creating..." : "Create provision script"}
+          </button>
+        </div>
       </form>
     </div>
   );

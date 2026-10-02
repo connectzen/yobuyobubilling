@@ -1,26 +1,40 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Router } from "@/lib/db";
+import { CopyBlock } from "@/components/copy-block";
 
 export function RouterSetup({
   router,
   oneLiner,
+  buyUrl,
 }: {
   router: Router;
   oneLiner: string;
+  buyUrl: string;
 }) {
   const nav = useRouter();
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [wan, setWan] = useState(router.wan_interface ?? "");
   const [lan, setLan] = useState(router.lan_interface ?? "");
   const [hotspot, setHotspot] = useState(router.hotspot_enabled);
   const [pppoe, setPppoe] = useState(router.pppoe_enabled);
-  const [antiShare, setAntiShare] = useState(router.anti_share_enabled);
+  const [antiShare, setAntiShare] = useState(
+    router.status === "configured" ? router.anti_share_enabled : true,
+  );
   const ports = useMemo(() => router.interfaces ?? [], [router.interfaces]);
+  const connected = ports.length > 0;
+
+  useEffect(() => {
+    if (connected) {
+      return;
+    }
+    const timer = window.setInterval(() => nav.refresh(), 3000);
+    return () => window.clearInterval(timer);
+  }, [connected, nav]);
 
   async function applyConfig() {
     setPending(true);
@@ -40,51 +54,65 @@ export function RouterSetup({
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-accent">MikroTik setup</p>
-        <h1 className="mt-2 text-2xl font-semibold">{router.name}</h1>
-        <p className="text-sm text-zinc-400">
-          Status: {router.status}
-          {router.board_name ? ` · ${router.board_name}` : ""}
-          {router.ros_version ? ` · ROS ${router.ros_version}` : ""}
-        </p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
+            MikroTik setup
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">{router.name}</h1>
+          <p className="mt-2 text-sm text-[#9aa3b2]">
+            Status: {router.status}
+            {router.board_name ? ` · ${router.board_name}` : ""}
+            {router.ros_version ? ` · ROS ${router.ros_version}` : ""}
+          </p>
+        </div>
+        <Link className="btn-ghost" href="/console/routers">
+          Back to routers
+        </Link>
       </div>
 
-      <section className="rounded-xl border border-line bg-panel p-5">
+      <section className="card p-5">
         <h2 className="font-medium">1. Provision</h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          Open Winbox → New Terminal, paste this one-liner, and press Enter. The
+        <p className="mt-1 text-sm text-[#9aa3b2]">
+          Open Winbox → New Terminal, copy this one-liner, paste it, and press Enter. The
           router downloads its agent and starts polling Yobuyobu.
         </p>
-        <pre className="mt-4 overflow-x-auto rounded-lg bg-black/40 p-4 text-xs">{oneLiner}</pre>
-        <button
-          className="btn-ghost mt-3"
-          type="button"
-          onClick={async () => {
-            await navigator.clipboard.writeText(oneLiner);
-            setCopied(true);
-          }}
-        >
-          {copied ? "Copied" : "Copy script"}
-        </button>
-        {router.status === "pending" ? (
-          <p className="mt-3 text-sm text-amber-300">Waiting for the router to check in...</p>
+        <CopyBlock label="Copy provision" value={oneLiner} />
+        {connected ? (
+          <p className="mt-3 text-sm text-emerald-400">
+            Router is online. {ports.length} port{ports.length === 1 ? "" : "s"} reported.
+          </p>
         ) : (
-          <p className="mt-3 text-sm text-emerald-400">Router is talking to Yobuyobu.</p>
+          <p className="mt-3 text-sm text-amber-300">
+            Waiting for the MikroTik to check in. Ports will appear here after it connects.
+          </p>
         )}
       </section>
 
-      <section className="rounded-xl border border-line bg-panel p-5">
+      <section className={`card p-5 ${connected ? "" : "opacity-70"}`}>
         <h2 className="font-medium">2. Ports and services</h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          Select WAN and LAN, then choose Hotspot, PPPoE, and unit sharing.
-        </p>
+        {connected ? (
+          <p className="mt-1 text-sm text-[#9aa3b2]">
+            Select WAN and LAN from the ports this MikroTik reported, then choose Hotspot,
+            PPPoE, and anti-sharing.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-[#9aa3b2]">
+            Port lists stay empty until this MikroTik connects. Paste the provision script
+            first, then this section unlocks.
+          </p>
+        )}
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="text-sm">
             WAN
-            <select className="mt-1 w-full" value={wan} onChange={(event) => setWan(event.target.value)}>
-              <option value="">Select port</option>
+            <select
+              className="mt-1 w-full"
+              disabled={!connected}
+              value={wan}
+              onChange={(event) => setWan(event.target.value)}
+            >
+              <option value="">{connected ? "Select port" : "Waiting for MikroTik"}</option>
               {ports.map((port) => (
                 <option key={`wan-${port.name}`} value={port.name}>
                   {port.name} ({port.type})
@@ -94,8 +122,13 @@ export function RouterSetup({
           </label>
           <label className="text-sm">
             LAN
-            <select className="mt-1 w-full" value={lan} onChange={(event) => setLan(event.target.value)}>
-              <option value="">Select port</option>
+            <select
+              className="mt-1 w-full"
+              disabled={!connected}
+              value={lan}
+              onChange={(event) => setLan(event.target.value)}
+            >
+              <option value="">{connected ? "Select port" : "Waiting for MikroTik"}</option>
               {ports.map((port) => (
                 <option key={`lan-${port.name}`} value={port.name}>
                   {port.name} ({port.type})
@@ -104,27 +137,61 @@ export function RouterSetup({
             </select>
           </label>
         </div>
-        {ports.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">Ports appear after the router comes online.</p>
-        ) : null}
-        <div className="mt-4 flex gap-4 text-sm">
+        <div className="mt-4 flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">
-            <input checked={hotspot} type="checkbox" onChange={(event) => setHotspot(event.target.checked)} />
+            <input
+              checked={hotspot}
+              disabled={!connected}
+              type="checkbox"
+              onChange={(event) => setHotspot(event.target.checked)}
+            />
             Hotspot
           </label>
           <label className="flex items-center gap-2">
-            <input checked={pppoe} type="checkbox" onChange={(event) => setPppoe(event.target.checked)} />
+            <input
+              checked={pppoe}
+              disabled={!connected}
+              type="checkbox"
+              onChange={(event) => setPppoe(event.target.checked)}
+            />
             PPPoE
           </label>
           <label className="flex items-center gap-2">
-            <input checked={antiShare} type="checkbox" onChange={(event) => setAntiShare(event.target.checked)} />
-            Unit sharing
+            <input
+              checked={antiShare}
+              disabled={!connected}
+              type="checkbox"
+              onChange={(event) => setAntiShare(event.target.checked)}
+            />
+            Anti-sharing
           </label>
         </div>
+        <p className="mt-2 text-sm text-[#6f7887]">
+          Anti-sharing keeps one login per account. Extra phones or hotspot sharing are blocked.
+        </p>
         {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
-        <button className="btn-primary mt-4" disabled={pending} type="button" onClick={applyConfig}>
-          {pending ? "Uploading..." : "Upload configuration"}
-        </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link className="btn-ghost" href="/console/routers">
+            Cancel
+          </Link>
+          <button
+            className="btn-primary"
+            disabled={pending || !connected}
+            type="button"
+            onClick={applyConfig}
+          >
+            {pending ? "Uploading..." : connected ? "Upload configuration" : "Waiting for ports"}
+          </button>
+        </div>
+      </section>
+
+      <section className="card p-5">
+        <h2 className="font-medium">3. Customer buy link</h2>
+        <p className="mt-1 text-sm text-[#9aa3b2]">
+          Customers pay M-PESA here. If the hotspot login page sends <code>?mac=</code>,
+          that device is opened automatically after payment.
+        </p>
+        <CopyBlock label="Copy link" value={buyUrl} />
       </section>
     </div>
   );

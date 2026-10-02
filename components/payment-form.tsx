@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export function PaymentForm({
@@ -13,6 +13,27 @@ export function PaymentForm({
   const router = useRouter();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [reference, setReference] = useState("");
+
+  useEffect(() => {
+    if (!reference) {
+      return;
+    }
+    const timer = window.setInterval(async () => {
+      const response = await fetch(`/api/paystack/status?reference=${reference}`);
+      const payload = await response.json();
+      if (payload.success && payload.data.status === "success") {
+        setMessage(`Connected as ${payload.data.username}. The router has the grant.`);
+        setReference("");
+        router.refresh();
+      }
+      if (payload.success && payload.data.status === "failed") {
+        setError("Payment failed");
+        setReference("");
+      }
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [reference, router]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,6 +48,7 @@ export function PaymentForm({
         phone: String(formData.get("phone") ?? ""),
         routerId: String(formData.get("routerId") ?? ""),
         planId: String(formData.get("planId") ?? ""),
+        macAddress: String(formData.get("macAddress") ?? ""),
       }),
     });
     const payload = await response.json();
@@ -34,15 +56,20 @@ export function PaymentForm({
       setError(payload.error ?? "Payment failed to start");
       return;
     }
-    setMessage(payload.data.message ?? "STK prompt sent");
-    router.refresh();
+    setReference(payload.data.reference);
+    setMessage(payload.data.message);
+    if (payload.data.granted) {
+      setReference("");
+      router.refresh();
+    }
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-xl border border-line bg-panel p-5 space-y-3">
-      <h2 className="font-medium">Charge with Paystack</h2>
+    <form onSubmit={onSubmit} className="card h-fit space-y-3 p-5">
+      <h2 className="font-medium text-[#eef0f4]">Charge with Paystack</h2>
       <input name="name" placeholder="Customer name" required className="w-full" />
       <input name="phone" placeholder="2547..." required className="w-full" />
+      <input name="macAddress" placeholder="MAC (optional, auto-connect)" className="w-full" />
       <select name="routerId" required className="w-full">
         <option value="">Router</option>
         {routers.map((row) => (
@@ -57,7 +84,9 @@ export function PaymentForm({
       </select>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
       {message ? <p className="text-sm text-emerald-400">{message}</p> : null}
-      <button className="btn-primary w-full" type="submit">Send M-PESA prompt</button>
+      <button className="btn-primary w-full" type="submit">
+        Send M-PESA prompt
+      </button>
     </form>
   );
 }

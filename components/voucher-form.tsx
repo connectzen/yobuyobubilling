@@ -35,8 +35,8 @@ export function VoucherForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-xl border border-line bg-panel p-5 space-y-3">
-      <h2 className="font-medium">Generate vouchers</h2>
+    <form onSubmit={onSubmit} className="card h-fit space-y-3 p-5">
+      <h2 className="font-medium text-[#eef0f4]">Generate vouchers</h2>
       <select name="routerId" required className="w-full">
         <option value="">Router</option>
         {routers.map((row) => (

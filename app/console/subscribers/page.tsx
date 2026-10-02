@@ -19,28 +19,47 @@ export default async function SubscribersPage() {
   ]);
 
   return (
-    <div className="grid grid-cols-[1fr_360px] gap-8">
+    <div className="mx-auto grid max-w-6xl gap-8 xl:grid-cols-[1fr_340px]">
       <div>
-        <h1 className="text-2xl font-semibold">Subscribers</h1>
-        <div className="mt-6 overflow-hidden rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-black/30 text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
+          Network
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Subscribers</h1>
+        <p className="mt-2 text-sm text-[#9aa3b2]">
+          Active grants pushed to MikroTik after payment or manual access.
+        </p>
+        <div className="table-wrap mt-8">
+          <table>
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">Customer</th>
-                <th className="px-4 py-3 text-left">Username</th>
-                <th className="px-4 py-3 text-left">Plan</th>
-                <th className="px-4 py-3 text-left">Expires</th>
+                <th>Customer</th>
+                <th>Username</th>
+                <th>Plan</th>
+                <th>Expires</th>
               </tr>
             </thead>
             <tbody>
-              {subscribers.map((row) => (
-                <tr key={row.id} className="border-t border-line">
-                  <td className="px-4 py-3">{row.name}<div className="text-zinc-500">{row.phone}</div></td>
-                  <td className="px-4 py-3">{row.username}</td>
-                  <td className="px-4 py-3">{row.plan_name}</td>
-                  <td className="px-4 py-3">{row.expires_at ? new Date(row.expires_at).toLocaleString() : "—"}</td>
+              {subscribers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-[#9aa3b2]">
+                    No subscribers yet.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                subscribers.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      {row.name}
+                      <div className="text-[#6f7887]">{row.phone}</div>
+                    </td>
+                    <td className="font-mono text-xs">{row.username}</td>
+                    <td>{row.plan_name}</td>
+                    <td className="text-[#9aa3b2]">
+                      {row.expires_at ? new Date(row.expires_at).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

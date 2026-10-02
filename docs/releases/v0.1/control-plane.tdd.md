@@ -19,5 +19,8 @@ Source plan: written in this session from the Connectzen-style MikroTik billing 
 | 4 | Hotspot/PPPoE/anti-share scripts | `tests/services.test.ts` | unit | PASS |
 | 5 | Grant duration and kick expiry | `tests/access.test.ts` | unit | PASS |
 | 6 | Paystack signature verify | `tests/paystack.test.ts` | unit | PASS |
+| 7 | Agent polls every 3s | `tests/provision.test.ts` | unit | PASS |
+| 8 | MAC bypass on hotspot grant | `tests/access.test.ts` | unit | PASS |
+| 9 | Paystack success is grant-ready | `tests/paystack.test.ts` | unit | PASS |
 
-Command: `npm test` — 13 passing.
+Command: `npm test` — 16 passing.

@@ -14,7 +14,7 @@ describe("MikroTik provision scripts", () => {
     });
 
     assert.match(line, /^\{/);
-    assert.match(line, /\/tool fetch mode=https/);
+    assert.match(line, /\/tool fetch mode=https check-certificate=yes/);
     assert.match(line, /url="https:\/\/billing\.yobuyobu\.com\/provision\/tok_abc"/);
     assert.match(line, /dst-path=yobuyobu\.rsc/);
     assert.match(line, /\/import yobuyobu\.rsc/);
@@ -40,7 +40,18 @@ describe("MikroTik provision scripts", () => {
     assert.match(script, /\/system scheduler/);
     assert.match(script, /yobuyobu-agent/);
     assert.match(script, /\/api\/agent\/tok_abc\/sync/);
+    assert.match(script, /interval=3s/);
+    assert.doesNotMatch(script, /interval=10s/);
     assert.doesNotMatch(script, /YOUR_|TODO|placeholder/i);
+  });
+
+  it("uses http fetch when the app url is not TLS", () => {
+    const line = buildProvisionOneLiner({
+      appUrl: "http://192.168.88.10:3000",
+      token: "tok_abc",
+    });
+    assert.match(line, /\/tool fetch mode=http /);
+    assert.doesNotMatch(line, /mode=https/);
   });
 
   it("parses interface reports from the agent", () => {

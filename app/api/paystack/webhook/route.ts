@@ -1,5 +1,4 @@
-import { sql } from "@/lib/db";
-import { fulfillPaidAccess } from "@/lib/billing/fulfill";
+import { applySuccessfulPayment } from "@/lib/billing/fulfill";
 import { fail, ok } from "@/lib/api";
 import { getPaystackSecret } from "@/lib/env";
 import { verifyPaystackSignature } from "@/lib/paystack";
@@ -16,42 +15,14 @@ export async function POST(request: Request) {
     return ok({ ignored: true });
   }
 
-  const reference = String(event.data?.reference ?? "");
-  const db = sql();
-  const rows = await db<{
-    id: string;
-    operator_id: string;
-    router_id: string;
-    plan_id: string;
-    phone: string;
-    customer_name: string;
-    status: string;
-  }[]>`
-    select id, operator_id, router_id, plan_id, phone, customer_name, status
-    from payments
-    where reference = ${reference}
-    limit 1
-  `;
-  const payment = rows[0];
-  if (!payment) {
-    return fail("Payment not found", 404);
+  try {
+    const grant = await applySuccessfulPayment(String(event.data?.reference ?? ""));
+    return ok({
+      granted: true,
+      duplicate: grant.duplicate,
+      username: grant.username,
+    });
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : "Grant failed", 404);
   }
-  if (payment.status === "success") {
-    return ok({ duplicate: true });
-  }
-
-  const grant = await fulfillPaidAccess({
-    operatorId: payment.operator_id,
-    routerId: payment.router_id,
-    planId: payment.plan_id,
-    name: payment.customer_name,
-    phone: payment.phone,
-  });
-  await db`
-    update payments
-    set status = 'success', subscriber_id = ${grant.subscriberId}
-    where id = ${payment.id}
-  `;
-
-  return ok({ granted: true, username: grant.username });
 }

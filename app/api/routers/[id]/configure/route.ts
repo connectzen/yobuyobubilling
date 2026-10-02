@@ -1,6 +1,7 @@
 import { getOperator } from "@/lib/auth";
 import { sql, type Router } from "@/lib/db";
 import { fail, ok } from "@/lib/api";
+import { getAppUrl } from "@/lib/env";
 import { buildServiceConfigScript } from "@/lib/mikrotik/services";
 
 export async function POST(
@@ -21,6 +22,7 @@ export async function POST(
       hotspot: Boolean(body?.hotspot),
       pppoe: Boolean(body?.pppoe),
       antiShare: Boolean(body?.antiShare),
+      buyHost: new URL(getAppUrl()).host,
     });
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Invalid configuration");

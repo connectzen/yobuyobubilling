@@ -14,28 +14,42 @@ export default async function PaymentsPage() {
   ]);
 
   return (
-    <div className="grid grid-cols-[1fr_360px] gap-8">
+    <div className="mx-auto grid max-w-6xl gap-8 xl:grid-cols-[1fr_340px]">
       <div>
-        <h1 className="text-2xl font-semibold">Payments</h1>
-        <div className="mt-6 overflow-hidden rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-black/30 text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
+          Finance
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Payments</h1>
+        <p className="mt-2 text-sm text-[#9aa3b2]">
+          Paystack M-PESA charges. Successful payments grant access automatically.
+        </p>
+        <div className="table-wrap mt-8">
+          <table>
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">Reference</th>
-                <th className="px-4 py-3 text-left">Phone</th>
-                <th className="px-4 py-3 text-left">KES</th>
-                <th className="px-4 py-3 text-left">Status</th>
+                <th>Reference</th>
+                <th>Phone</th>
+                <th>KES</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {payments.map((row) => (
-                <tr key={row.id} className="border-t border-line">
-                  <td className="px-4 py-3 font-mono text-xs">{row.reference}</td>
-                  <td className="px-4 py-3">{row.phone}</td>
-                  <td className="px-4 py-3">{row.amount_kes}</td>
-                  <td className="px-4 py-3 capitalize">{row.status}</td>
+              {payments.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-[#9aa3b2]">
+                    No payments yet.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                payments.map((row) => (
+                  <tr key={row.id}>
+                    <td className="font-mono text-xs">{row.reference}</td>
+                    <td>{row.phone}</td>
+                    <td>{row.amount_kes}</td>
+                    <td className="capitalize">{row.status}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -4,6 +4,7 @@ export type ServiceConfigInput = {
   hotspot: boolean;
   pppoe: boolean;
   antiShare: boolean;
+  buyHost?: string;
 };
 
 function requirePort(value: string, label: string): string {
@@ -42,6 +43,12 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
       `/ip hotspot remove [find name="yb-hotspot"]`,
       `/ip hotspot add name=yb-hotspot interface=${lan} address-pool=yb-hotspot profile=yb-hotspot`,
     );
+    if (input.buyHost) {
+      lines.push(
+        `/ip hotspot walled-garden remove [find comment="yobuyobu-buy"]`,
+        `/ip hotspot walled-garden add dst-host=${input.buyHost} comment=yobuyobu-buy`,
+      );
+    }
   }
 
   if (input.pppoe) {

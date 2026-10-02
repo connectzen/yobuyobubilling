@@ -1,0 +1,10 @@
+.env*
+.tmp*
+.cursor
+.next
+node_modules
+tests
+docs
+scripts
+cd4a.config.json
+*.log

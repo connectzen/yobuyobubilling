@@ -22,12 +22,17 @@ export default async function RouterDetailPage({
     notFound();
   }
 
+  const appUrl = getAppUrl();
   const oneLiner = buildProvisionOneLiner({
-    appUrl: getAppUrl(),
+    appUrl,
     token: router.token,
   });
 
   return (
-    <RouterSetup router={router} oneLiner={oneLiner} />
+    <RouterSetup
+      router={router}
+      oneLiner={oneLiner}
+      buyUrl={`${appUrl}/buy/${router.token}`}
+    />
   );
 }

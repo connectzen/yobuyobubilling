@@ -12,5 +12,5 @@ export default async function ConsoleLayout({
     redirect("/");
   }
 
-  return <Shell operator={operator}>{children}</Shell>;
+  return <Shell operatorName={operator.name}>{children}</Shell>;
 }

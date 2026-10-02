@@ -7,7 +7,22 @@ function required(name: string): string {
 }
 
 export function getAppUrl(): string {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const configured = (process.env.APP_URL ?? "").trim().replace(/\/$/, "");
+  const onVercel = Boolean(process.env.VERCEL);
+  if (configured && !(onVercel && /localhost|127\.0\.0\.1/i.test(configured))) {
+    return configured;
+  }
+  const vercelHost = (
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+    process.env.VERCEL_URL ??
+    ""
+  )
+    .trim()
+    .replace(/^https?:\/\//, "");
+  if (vercelHost) {
+    return `https://${vercelHost}`;
+  }
+  return configured || "http://localhost:3000";
 }
 
 export function getDatabaseUrl(): string {

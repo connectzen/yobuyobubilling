@@ -25,6 +25,7 @@ export function SubscriberForm({
         phone: String(formData.get("phone") ?? ""),
         routerId: String(formData.get("routerId") ?? ""),
         planId: String(formData.get("planId") ?? ""),
+        macAddress: String(formData.get("macAddress") ?? ""),
       }),
     });
     const payload = await response.json();
@@ -36,10 +37,11 @@ export function SubscriberForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-xl border border-line bg-panel p-5 space-y-3">
-      <h2 className="font-medium">Grant access</h2>
+    <form onSubmit={onSubmit} className="card h-fit space-y-3 p-5">
+      <h2 className="font-medium text-[#eef0f4]">Grant access</h2>
       <input name="name" placeholder="Customer name" required className="w-full" />
       <input name="phone" placeholder="2547..." required className="w-full" />
+      <input name="macAddress" placeholder="MAC (optional, auto-connect)" className="w-full" />
       <select name="routerId" required className="w-full">
         <option value="">Router</option>
         {routers.map((row) => (

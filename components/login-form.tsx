@@ -36,7 +36,7 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="mt-6 space-y-3">
       {mode === "register" ? (
-        <input name="name" placeholder="Business name" required />
+        <input name="name" placeholder="Business name" required className="w-full" />
       ) : null}
       <input name="email" type="email" placeholder="Email" required className="w-full" />
       <input name="password" type="password" placeholder="Password" required minLength={8} className="w-full" />
@@ -45,7 +45,7 @@ export function LoginForm() {
         {pending ? "Working..." : mode === "login" ? "Sign in" : "Create operator"}
       </button>
       <button
-        className="w-full text-sm text-zinc-400"
+        className="w-full text-sm text-[#9aa3b2]"
         type="button"
         onClick={() => setMode(mode === "login" ? "register" : "login")}
       >

@@ -15,6 +15,14 @@ function escapeRouterOs(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+function fetchMode(appUrl: string): "http" | "https" {
+  return appUrl.startsWith("https://") ? "https" : "http";
+}
+
+function fetchOptions(appUrl: string): string {
+  return fetchMode(appUrl) === "https" ? "mode=https check-certificate=yes" : "mode=http";
+}
+
 export function buildProvisionOneLiner(input: {
   appUrl: string;
   token: string;
@@ -22,7 +30,7 @@ export function buildProvisionOneLiner(input: {
   const appUrl = requireText(input.appUrl, "App URL").replace(/\/$/, "");
   const token = requireText(input.token, "Token");
   const url = `${appUrl}/provision/${encodeURIComponent(token)}`;
-  return `{/tool fetch mode=https url="${url}" dst-path=yobuyobu.rsc;:delay 2s;/import yobuyobu.rsc;}`;
+  return `{/tool fetch ${fetchOptions(appUrl)} url="${url}" dst-path=yobuyobu.rsc;:delay 2s;/import yobuyobu.rsc;}`;
 }
 
 export function buildBootstrapScript(input: {
@@ -48,11 +56,11 @@ export function buildBootstrapScript(input: {
   :local id [/system identity get name]
   :local ver [/system resource get version]
   :local board [/system resource get board-name]
-  /tool fetch mode=https http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-cmd.rsc
-  :delay 1s
+  /tool fetch ${fetchOptions(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") dst-path=yobuyobu-cmd.rsc
+  :delay 200ms
   /import yobuyobu-cmd.rsc
 }
-/system scheduler add name=yobuyobu-agent interval=10s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive
+/system scheduler add name=yobuyobu-agent interval=3s on-event=yobuyobu-agent policy=read,write,policy,test,sensitive
 /system script run yobuyobu-agent
 `.trim();
 }

@@ -10,45 +10,58 @@ export default async function RoutersPage() {
   `;
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-6xl">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Routers</h1>
-          <p className="text-sm text-zinc-400">Provision MikroTik, then push services.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
+            Network
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Routers</h1>
+          <p className="mt-2 text-sm text-[#9aa3b2]">
+            Provision MikroTik, then push hotspot or PPPoE.
+          </p>
         </div>
         <Link className="btn-primary" href="/console/routers/new">
           Link MikroTik
         </Link>
       </div>
-      <div className="mt-6 overflow-hidden rounded-xl border border-line">
-        <table className="w-full text-sm">
-          <thead className="bg-black/30 text-zinc-400">
+      <div className="table-wrap mt-8">
+        <table>
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">Status</th>
-              <th className="px-4 py-3 text-left">Services</th>
-              <th className="px-4 py-3 text-left">Last seen</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Services</th>
+              <th>Last seen</th>
             </tr>
           </thead>
           <tbody>
-            {routers.map((router) => (
-              <tr key={router.id} className="border-t border-line">
-                <td className="px-4 py-3">
-                  <Link className="text-accent" href={`/console/routers/${router.id}`}>
-                    {router.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 capitalize">{router.status}</td>
-                <td className="px-4 py-3">
-                  {[router.hotspot_enabled && "Hotspot", router.pppoe_enabled && "PPPoE", router.anti_share_enabled && "Anti-share"]
-                    .filter(Boolean)
-                    .join(" · ") || "Not applied"}
-                </td>
-                <td className="px-4 py-3 text-zinc-400">
-                  {router.last_seen_at ? new Date(router.last_seen_at).toLocaleString() : "Waiting"}
+            {routers.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="text-[#9aa3b2]">
+                  No routers yet. Link a MikroTik to get the paste-in script.
                 </td>
               </tr>
-            ))}
+            ) : (
+              routers.map((router) => (
+                <tr key={router.id}>
+                  <td>
+                    <Link className="font-medium text-[#f5a524]" href={`/console/routers/${router.id}`}>
+                      {router.name}
+                    </Link>
+                  </td>
+                  <td className="capitalize">{router.status}</td>
+                  <td>
+                    {[router.hotspot_enabled && "Hotspot", router.pppoe_enabled && "PPPoE", router.anti_share_enabled && "Anti-sharing"]
+                      .filter(Boolean)
+                      .join(" · ") || "Not applied"}
+                  </td>
+                  <td className="text-[#9aa3b2]">
+                    {router.last_seen_at ? new Date(router.last_seen_at).toLocaleString() : "Waiting"}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

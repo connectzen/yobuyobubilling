@@ -1,6 +1,6 @@
 import { sql, type Router } from "@/lib/db";
 import { rsc } from "@/lib/api";
-import { kickScript, isExpired } from "@/lib/billing/access";
+import { kickScript } from "@/lib/billing/access";
 import { idleAgentScript, parseInterfaceReport } from "@/lib/mikrotik/provision";
 
 export async function POST(
@@ -31,8 +31,8 @@ export async function POST(
     where id = ${router.id}
   `;
 
-  const expired = await db<{ username: string; service_type: "hotspot" | "pppoe"; id: string }[]>`
-    select id, username, service_type from subscribers
+  const expired = await db<{ username: string; service_type: "hotspot" | "pppoe"; id: string; mac_address: string | null }[]>`
+    select id, username, service_type, mac_address from subscribers
     where router_id = ${router.id}
       and status = 'active'
       and expires_at is not null
@@ -42,7 +42,7 @@ export async function POST(
   for (const row of expired) {
     await db`
       insert into router_commands (router_id, script)
-      values (${router.id}, ${kickScript(row.username, row.service_type)})
+      values (${router.id}, ${kickScript(row.username, row.service_type, row.mac_address ?? undefined)})
     `;
     await db`update subscribers set status = 'expired' where id = ${row.id}`;
   }

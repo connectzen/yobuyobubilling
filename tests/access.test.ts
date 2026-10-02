@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { grantAccess, isExpired } from "../lib/billing/access.ts";
+import { grantAccess, isExpired, kickScript } from "../lib/billing/access.ts";
 
 describe("package access", () => {
   it("adds plan duration to the grant time", () => {
@@ -34,6 +34,28 @@ describe("package access", () => {
     assert.match(grant.script, /\/ppp secret add/);
     assert.match(grant.script, /name=cust-22/);
     assert.match(grant.script, /password=secret22/);
+  });
+
+  it("bypasses the hotspot client immediately when a MAC is known", () => {
+    const grant = grantAccess({
+      now: new Date("2026-10-02T08:00:00.000Z"),
+      durationMinutes: 60,
+      downloadKbps: 10240,
+      uploadKbps: 2048,
+      serviceType: "hotspot",
+      username: "254700000000",
+      macAddress: "AA:BB:CC:DD:EE:FF",
+    });
+
+    assert.match(grant.script, /\/ip hotspot ip-binding add/);
+    assert.match(grant.script, /mac-address=AA:BB:CC:DD:EE:FF/);
+    assert.match(grant.script, /type=bypassed/);
+  });
+
+  it("removes the MAC bypass when the package expires", () => {
+    const script = kickScript("254700000000", "hotspot", "AA:BB:CC:DD:EE:FF");
+    assert.match(script, /\/ip hotspot ip-binding remove/);
+    assert.match(script, /AA:BB:CC:DD:EE:FF/);
   });
 
   it("treats a session as expired at or after expires_at", () => {

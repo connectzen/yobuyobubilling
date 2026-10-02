@@ -10,3 +10,5 @@ data
 cd4a.config.json
 scripts
 .tmp-db-pass.txt
+.tmp*
+.tmp-uploads/

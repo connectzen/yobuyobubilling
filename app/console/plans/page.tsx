@@ -1,6 +1,8 @@
 import { getOperator } from "@/lib/auth";
 import { sql, type Plan } from "@/lib/db";
 import { PlanForm } from "@/components/plan-form";
+import { formatDuration } from "@/lib/billing/duration";
+import { formatMbps } from "@/lib/billing/speed";
 
 export default async function PlansPage() {
   const operator = await getOperator();
@@ -10,38 +12,53 @@ export default async function PlansPage() {
   `;
 
   return (
-    <div className="grid grid-cols-[1fr_360px] gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Packages</h1>
-        <p className="text-sm text-zinc-400">Speed, duration, and price sold to customers.</p>
-        <div className="mt-6 overflow-hidden rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-black/30 text-zinc-400">
-              <tr>
-                <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3 text-left">Speed</th>
-                <th className="px-4 py-3 text-left">Time</th>
-                <th className="px-4 py-3 text-left">KES</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plans.map((plan) => (
-                <tr key={plan.id} className="border-t border-line">
-                  <td className="px-4 py-3">{plan.name}</td>
-                  <td className="px-4 py-3 capitalize">{plan.service_type}</td>
-                  <td className="px-4 py-3">
-                    {plan.download_kbps}k / {plan.upload_kbps}k
-                  </td>
-                  <td className="px-4 py-3">{plan.duration_minutes} min</td>
-                  <td className="px-4 py-3">{plan.price_kes}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="mx-auto max-w-6xl">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
+            Network
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Packages</h1>
+          <p className="mt-2 text-sm text-[#9aa3b2]">
+            Speed, duration, and price sold to customers.
+          </p>
         </div>
+        <PlanForm />
       </div>
-      <PlanForm />
+      <div className="table-wrap mt-8">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Speed</th>
+              <th>Time</th>
+              <th>KES</th>
+            </tr>
+          </thead>
+          <tbody>
+            {plans.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-[#9aa3b2]">
+                  No packages yet. Add one with New package.
+                </td>
+              </tr>
+            ) : (
+              plans.map((plan) => (
+                <tr key={plan.id}>
+                  <td>{plan.name}</td>
+                  <td className="capitalize">{plan.service_type}</td>
+                  <td>
+                    {formatMbps(plan.download_kbps)} / {formatMbps(plan.upload_kbps)}
+                  </td>
+                  <td>{formatDuration(plan.duration_minutes)}</td>
+                  <td>{plan.price_kes}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -21,29 +21,45 @@ export default async function SessionsPage() {
   `;
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">Live sessions</h1>
-      <div className="mt-6 overflow-hidden rounded-xl border border-line">
-        <table className="w-full text-sm">
-          <thead className="bg-black/30 text-zinc-400">
+    <div className="mx-auto max-w-6xl">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
+        Operate
+      </p>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Live sessions</h1>
+      <p className="mt-2 text-sm text-[#9aa3b2]">
+        Devices currently seen on your MikroTik radios.
+      </p>
+      <div className="table-wrap mt-8">
+        <table>
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left">User</th>
-              <th className="px-4 py-3 text-left">Router</th>
-              <th className="px-4 py-3 text-left">IP</th>
-              <th className="px-4 py-3 text-left">MAC</th>
-              <th className="px-4 py-3 text-left">Seen</th>
+              <th>User</th>
+              <th>Router</th>
+              <th>IP</th>
+              <th>MAC</th>
+              <th>Seen</th>
             </tr>
           </thead>
           <tbody>
-            {sessions.map((row) => (
-              <tr key={row.id} className="border-t border-line">
-                <td className="px-4 py-3">{row.username}</td>
-                <td className="px-4 py-3">{row.router_name}</td>
-                <td className="px-4 py-3">{row.ip ?? "—"}</td>
-                <td className="px-4 py-3">{row.mac ?? "—"}</td>
-                <td className="px-4 py-3">{new Date(row.last_seen_at).toLocaleString()}</td>
+            {sessions.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-[#9aa3b2]">
+                  No live sessions yet.
+                </td>
               </tr>
-            ))}
+            ) : (
+              sessions.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.username}</td>
+                  <td>{row.router_name}</td>
+                  <td className="font-mono text-xs">{row.ip ?? "—"}</td>
+                  <td className="font-mono text-xs">{row.mac ?? "—"}</td>
+                  <td className="text-[#9aa3b2]">
+                    {new Date(row.last_seen_at).toLocaleString()}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

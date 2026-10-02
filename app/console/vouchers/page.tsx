@@ -20,28 +20,42 @@ export default async function VouchersPage() {
   ]);
 
   return (
-    <div className="grid grid-cols-[1fr_360px] gap-8">
+    <div className="mx-auto grid max-w-6xl gap-8 xl:grid-cols-[1fr_340px]">
       <div>
-        <h1 className="text-2xl font-semibold">Vouchers</h1>
-        <div className="mt-6 overflow-hidden rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-black/30 text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5a524]">
+          Network
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Vouchers</h1>
+        <p className="mt-2 text-sm text-[#9aa3b2]">
+          Prepaid codes for hotspot login when you sell offline.
+        </p>
+        <div className="table-wrap mt-8">
+          <table>
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">Code</th>
-                <th className="px-4 py-3 text-left">Plan</th>
-                <th className="px-4 py-3 text-left">Router</th>
-                <th className="px-4 py-3 text-left">Status</th>
+                <th>Code</th>
+                <th>Plan</th>
+                <th>Router</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {vouchers.map((row) => (
-                <tr key={row.id} className="border-t border-line">
-                  <td className="px-4 py-3 font-mono">{row.code}</td>
-                  <td className="px-4 py-3">{row.plan_name}</td>
-                  <td className="px-4 py-3">{row.router_name}</td>
-                  <td className="px-4 py-3 capitalize">{row.status}</td>
+              {vouchers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-[#9aa3b2]">
+                    No vouchers yet.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                vouchers.map((row) => (
+                  <tr key={row.id}>
+                    <td className="font-mono">{row.code}</td>
+                    <td>{row.plan_name}</td>
+                    <td>{row.router_name}</td>
+                    <td className="capitalize">{row.status}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,37 +1,37 @@
-import { getOperator } from "@/lib/auth";
 import { startPackageCharge } from "@/lib/billing/charge";
 import { sql, type Plan, type Router } from "@/lib/db";
 import { fail, ok } from "@/lib/api";
 
 export async function POST(request: Request) {
-  const operator = await getOperator();
-  if (!operator) {
-    return fail("Unauthorized", 401);
-  }
   const body = await request.json().catch(() => null);
-  const name = String(body?.name ?? "").trim();
+  const token = String(body?.token ?? "").trim();
+  const name = String(body?.name ?? "").trim() || "Hotspot customer";
   const phone = String(body?.phone ?? "").replace(/\s+/g, "");
-  const routerId = String(body?.routerId ?? "");
   const planId = String(body?.planId ?? "");
   const macAddress = String(body?.macAddress ?? "").trim() || undefined;
-  if (!name || !phone || !routerId || !planId) {
-    return fail("Customer, phone, router, and plan are required");
+  if (!token || !phone || !planId) {
+    return fail("Phone, package, and router token are required");
   }
 
   const db = sql();
   const [router] = await db<Router[]>`
-    select * from routers where id = ${routerId} and operator_id = ${operator.id} limit 1
+    select * from routers where token = ${token} limit 1
   `;
+  if (!router) {
+    return fail("Router not found", 404);
+  }
   const [plan] = await db<Plan[]>`
-    select * from plans where id = ${planId} and operator_id = ${operator.id} limit 1
+    select * from plans
+    where id = ${planId} and operator_id = ${router.operator_id} and active = true
+    limit 1
   `;
-  if (!router || !plan) {
-    return fail("Router or plan not found", 404);
+  if (!plan) {
+    return fail("Package not found", 404);
   }
 
   try {
     const result = await startPackageCharge({
-      operatorId: operator.id,
+      operatorId: router.operator_id,
       router,
       plan,
       name,

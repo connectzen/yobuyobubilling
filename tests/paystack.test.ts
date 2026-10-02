@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
-import { verifyPaystackSignature } from "../lib/paystack.ts";
+import { isChargeSuccessful, verifyPaystackSignature } from "../lib/paystack.ts";
 
 describe("Paystack webhook signature", () => {
   it("accepts a matching HMAC SHA512 signature", () => {
@@ -9,6 +9,12 @@ describe("Paystack webhook signature", () => {
     const secret = "sk_test_example";
     const signature = createHmac("sha512", secret).update(body).digest("hex");
     assert.equal(verifyPaystackSignature(body, signature, secret), true);
+  });
+
+  it("treats Paystack success as ready to grant access", () => {
+    assert.equal(isChargeSuccessful({ data: { status: "success" } }), true);
+    assert.equal(isChargeSuccessful({ data: { status: "pending" } }), false);
+    assert.equal(isChargeSuccessful({ data: { status: "failed" } }), false);
   });
 
   it("rejects a missing or wrong signature", () => {

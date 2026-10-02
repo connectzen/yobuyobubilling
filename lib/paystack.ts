@@ -21,3 +21,9 @@ export function verifyPaystackSignature(
 export function toPaystackAmount(kes: number): number {
   return Math.round(kes * 100);
 }
+
+export function isChargeSuccessful(payload: {
+  data?: { status?: string };
+}): boolean {
+  return payload.data?.status === "success";
+}
