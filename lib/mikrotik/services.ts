@@ -11,6 +11,7 @@ export type ServiceConfigInput = {
   hotspot: boolean;
   pppoe: boolean;
   antiShare: boolean;
+  ssid?: string;
   buyHost?: string;
   appUrl?: string;
   routerToken?: string;
@@ -75,16 +76,39 @@ function isCustomerPort(port: RouterPort, wan: string): boolean {
   return !SKIP_TYPES.has(port.type.toLowerCase());
 }
 
-export function customerLanPorts(wanInterface: string, ports: RouterPort[] | unknown): string[] {
+function isWifiwavePort(port: RouterPort): boolean {
+  const type = port.type.toLowerCase();
+  const name = port.name.toLowerCase();
+  return type === "wifi" || name.startsWith("wifi");
+}
+
+function isClassicWlanPort(port: RouterPort): boolean {
+  const type = port.type.toLowerCase();
+  const name = port.name.toLowerCase();
+  return type === "wlan" || name.startsWith("wlan");
+}
+
+export function hotspotSsid(value?: string): string {
+  const cleaned = (value ?? "").trim().replace(/["\\]/g, "").slice(0, 32);
+  return cleaned || "Yobuyobu";
+}
+
+export function customerLanPortRecords(
+  wanInterface: string,
+  ports: RouterPort[] | unknown,
+): RouterPort[] {
   const wan = wanInterface.trim();
-  return normalizeRouterPorts(ports)
-    .filter((port) => isCustomerPort(port, wan))
-    .map((port) => port.name);
+  return normalizeRouterPorts(ports).filter((port) => isCustomerPort(port, wan));
+}
+
+export function customerLanPorts(wanInterface: string, ports: RouterPort[] | unknown): string[] {
+  return customerLanPortRecords(wanInterface, ports).map((port) => port.name);
 }
 
 export function buildServiceConfigScript(input: ServiceConfigInput): string {
   const wan = requirePort(input.wanInterface, "WAN interface");
-  const lanPorts = customerLanPorts(wan, input.ports);
+  const lanPortRecords = customerLanPortRecords(wan, input.ports);
+  const lanPorts = lanPortRecords.map((port) => port.name);
   if (lanPorts.length === 0) {
     throw new Error("Choose a WAN port so the remaining ports can be used for customers");
   }
@@ -92,11 +116,16 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
     throw new Error("Choose hotspot or PPPoE");
   }
 
+  const ssid = hotspotSsid(input.ssid);
+  const wifiwavePorts = lanPortRecords.filter(isWifiwavePort);
+  const classicWlanPorts = lanPortRecords.filter(isClassicWlanPort);
+
   const lines = [
     `/log warning "yobuyobu applying LAN and services"`,
     tryDo(`/ip hotspot remove [find name="yb-hotspot"]`),
     tryDo(`/interface pppoe-server server remove [find service-name="yb-pppoe"]`),
     tryDo(`/ip address remove [find comment="yobuyobu-hotspot"]`),
+    tryDo(`/interface wifi datapath remove [find name="yb-hotspot"]`),
     tryDo(`/interface bridge port remove [find comment="yobuyobu-lan"]`),
     tryDo(`/interface bridge remove [find name="${LAN_BRIDGE}"]`),
     tryDo(`/interface bridge add name=${LAN_BRIDGE} comment=yobuyobu-lan`),
@@ -108,10 +137,38 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
     tryDo(`/interface list member add list=WAN interface=${wan}`),
   ];
 
-  for (const port of lanPorts) {
+  for (const port of lanPortRecords) {
+    lines.push(tryDo(`/interface bridge port remove [find interface="${port.name}"]`));
+    if (!isWifiwavePort(port)) {
+      lines.push(
+        tryDo(
+          `/interface bridge port add bridge=${LAN_BRIDGE} interface=${port.name} comment=yobuyobu-lan`,
+        ),
+      );
+    }
+  }
+
+  if (wifiwavePorts.length > 0) {
     lines.push(
-      tryDo(`/interface bridge port remove [find interface="${port}"]`),
-      tryDo(`/interface bridge port add bridge=${LAN_BRIDGE} interface=${port} comment=yobuyobu-lan`),
+      tryDo(`/interface wifi datapath remove [find name="yb-hotspot"]`),
+      tryDo(
+        `/interface wifi datapath add name=yb-hotspot bridge=${LAN_BRIDGE} comment=yobuyobu-hotspot`,
+      ),
+    );
+    for (const port of wifiwavePorts) {
+      lines.push(
+        tryDo(
+          `/interface wifi set [find name="${port.name}"] disabled=no configuration.ssid=${rosValue(ssid)} configuration.mode=ap datapath=yb-hotspot security.authentication-types=""`,
+        ),
+      );
+    }
+  }
+
+  for (const port of classicWlanPorts) {
+    lines.push(
+      tryDo(
+        `/interface wireless set [find name="${port.name}"] mode=ap-bridge ssid=${rosValue(ssid)} disabled=no`,
+      ),
     );
   }
 

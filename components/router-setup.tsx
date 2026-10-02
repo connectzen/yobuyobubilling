@@ -31,6 +31,7 @@ export function RouterSetup({
   const [antiShare, setAntiShare] = useState(
     router.status === "configured" ? router.anti_share_enabled : true,
   );
+  const [ssid, setSsid] = useState(router.name || "Yobuyobu");
   const ports = useMemo(
     () => normalizeRouterPorts(router.interfaces),
     [router.interfaces],
@@ -67,7 +68,7 @@ export function RouterSetup({
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ wanInterface: wan, hotspot, pppoe, antiShare }),
+        body: JSON.stringify({ wanInterface: wan, hotspot, pppoe, antiShare, ssid }),
       });
       const result = readConfigureApiResult(response.status, await response.text());
       if (!result.ok) {
@@ -126,7 +127,8 @@ export function RouterSetup({
         <h2 className="font-medium">2. Ports and services</h2>
         {connected ? (
           <p className="mt-1 text-sm text-[#9aa3b2]">
-            Choose the WAN port. Every remaining customer port joins Hotspot and PPPoE.
+            Choose the WAN port. Ethernet, SFP, and Wi-Fi all join the same Hotspot
+            bridge. Phones connect to the SSID below.
           </p>
         ) : (
           <p className="mt-1 text-sm text-[#9aa3b2]">
@@ -161,6 +163,17 @@ export function RouterSetup({
               </p>
             </div>
           ) : null}
+          <label className="text-sm">
+            Wi-Fi name (SSID)
+            <input
+              className="mt-1 w-full"
+              disabled={!connected}
+              maxLength={32}
+              value={ssid}
+              onChange={(event) => setSsid(event.target.value)}
+              placeholder="manyatta"
+            />
+          </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">

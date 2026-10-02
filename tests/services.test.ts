@@ -166,7 +166,7 @@ describe("MikroTik service configuration", () => {
     assert.match(script, /walled-garden add dst-host=safisaana\.com comment=yobuyobu-buy/);
     assert.match(script, /walled-garden ip add dst-host=safisaana\.com action=accept comment=yobuyobu-buy/);
     assert.match(script, /login-by="http-chap,http-pap,mac-cookie"/);
-    assert.doesNotMatch(script, /mode=/);
+    assert.doesNotMatch(script, /mode=https/);
     assert.doesNotMatch(script, /check-certificate=yes/);
   });
 
@@ -185,5 +185,64 @@ describe("MikroTik service configuration", () => {
     assert.doesNotMatch(script, /login\.html/);
     assert.doesNotMatch(script, /html-directory/);
     assert.doesNotMatch(script, /walled-garden/);
+  });
+
+  it("puts wifiwave2 radios on yb-lan with an open hotspot SSID", () => {
+    const ports = [
+      { name: "ether1", type: "ether" },
+      { name: "ether2", type: "ether" },
+      { name: "wifi1", type: "wifi" },
+      { name: "sfp1", type: "sfp-sfpplus" },
+    ];
+    assert.deepEqual(customerLanPorts("ether1", ports), ["ether2", "wifi1", "sfp1"]);
+
+    const script = buildServiceConfigScript({
+      wanInterface: "ether1",
+      ports,
+      hotspot: true,
+      pppoe: true,
+      antiShare: false,
+      ssid: "manyatta",
+    });
+
+    assert.match(script, /bridge=yb-lan interface=ether2/);
+    assert.match(script, /bridge=yb-lan interface=sfp1/);
+    assert.doesNotMatch(script, /bridge=yb-lan interface=wifi1/);
+    assert.match(script, /\/interface wifi datapath add name=yb-hotspot bridge=yb-lan/);
+    assert.match(
+      script,
+      /\/interface wifi set \[find name="wifi1"\] disabled=no configuration\.ssid=manyatta configuration\.mode=ap datapath=yb-hotspot security\.authentication-types=""/,
+    );
+  });
+
+  it("turns classic wlan into an AP on the hotspot bridge", () => {
+    const script = buildServiceConfigScript({
+      wanInterface: "ether1",
+      ports: samplePorts,
+      hotspot: true,
+      pppoe: false,
+      antiShare: false,
+      ssid: "Manyatta WiFi",
+    });
+
+    assert.match(script, /bridge=yb-lan interface=wlan1/);
+    assert.match(
+      script,
+      /\/interface wireless set \[find name="wlan1"\] mode=ap-bridge ssid="Manyatta WiFi" disabled=no/,
+    );
+    assert.doesNotMatch(script, /\/interface wifi datapath add/);
+    assert.doesNotMatch(script, /\/interface wifi set/);
+  });
+
+  it("defaults the hotspot SSID when none is given", () => {
+    const script = buildServiceConfigScript({
+      wanInterface: "ether1",
+      ports: samplePorts,
+      hotspot: true,
+      pppoe: false,
+      antiShare: false,
+    });
+
+    assert.match(script, /ssid=Yobuyobu/);
   });
 });

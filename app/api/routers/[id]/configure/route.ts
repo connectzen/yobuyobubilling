@@ -33,6 +33,7 @@ export async function POST(
       hotspot: Boolean(body?.hotspot),
       pppoe: Boolean(body?.pppoe),
       antiShare: Boolean(body?.antiShare),
+      ssid: String(body?.ssid ?? router.name ?? ""),
       buyHost: new URL(appUrl).host,
       appUrl,
       routerToken: router.token,
