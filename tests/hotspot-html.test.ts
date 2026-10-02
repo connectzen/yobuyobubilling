@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildHotspotHtml,
@@ -67,5 +68,11 @@ describe("MikroTik hotspot login HTML", () => {
     assert.equal(clientMacFromQuery({ mac: "", "identity-mac": "11:22:33:44:55:66" }), "11:22:33:44:55:66");
     assert.equal(clientMacFromQuery({ mac: "AABBCCDDEEFF" }), "AA:BB:CC:DD:EE:FF");
     assert.equal(clientMacFromQuery({}), "");
+  });
+
+  it("does not pull Node crypto into the Wi-Fi setup page", () => {
+    const source = readFileSync(new URL("../lib/mikrotik/hotspot-html.ts", import.meta.url), "utf8");
+    assert.doesNotMatch(source, /billing\/access/);
+    assert.doesNotMatch(source, /node:crypto/);
   });
 });

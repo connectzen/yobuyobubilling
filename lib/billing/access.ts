@@ -1,4 +1,7 @@
 import { randomBytes } from "node:crypto";
+import { normalizeMac } from "./mac.ts";
+
+export { normalizeMac };
 
 export type ServiceType = "hotspot" | "pppoe";
 
@@ -101,16 +104,4 @@ export function usernameFromPhone(phone: string): string {
     throw new Error("Phone number is required");
   }
   return digits;
-}
-
-export function normalizeMac(value?: string): string | undefined {
-  const raw = (value ?? "").trim();
-  if (!raw) {
-    return undefined;
-  }
-  const hex = raw.toUpperCase().replace(/[^0-9A-F]/g, "");
-  if (hex.length !== 12) {
-    throw new Error("MAC address is invalid");
-  }
-  return hex.match(/.{2}/g)!.join(":");
 }

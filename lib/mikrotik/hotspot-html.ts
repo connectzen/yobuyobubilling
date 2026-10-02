@@ -1,4 +1,4 @@
-import { normalizeMac } from "../billing/access.ts";
+import { normalizeMac } from "../billing/mac.ts";
 
 export const HOTSPOT_HTML_FILES = [
   "login.html",
