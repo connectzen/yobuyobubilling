@@ -64,7 +64,7 @@ function buyPageUrl(input: HotspotHtmlInput): string {
 }
 
 function buyRedirectUrl(input: HotspotHtmlInput): string {
-  return `${buyPageUrl(input)}?mac=$(mac)&ip=$(ip)`;
+  return `${buyPageUrl(input)}?v=3&mac=$(mac)&ip=$(ip)`;
 }
 
 function htmlPage(title: string, body: string): string {
@@ -98,7 +98,7 @@ function redirectPage(input: HotspotHtmlInput): string {
   var mac = "$(mac)";
   if (!mac) { mac = "$(identity-mac)"; }
   var ip = "$(ip)";
-  var url = "${buy}?mac=" + encodeURIComponent(mac) + "&ip=" + encodeURIComponent(ip);
+  var url = "${buy}?v=3&mac=" + encodeURIComponent(mac) + "&ip=" + encodeURIComponent(ip);
   location.replace(url);
 })();
 </script>

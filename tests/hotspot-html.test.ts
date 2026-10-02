@@ -33,9 +33,10 @@ describe("MikroTik hotspot login HTML", () => {
     });
 
     assert.match(html, /http-equiv="refresh"/i);
-    assert.match(html, /https:\/\/safisaana\.com\/buy\/tok_abc\?mac=\$\(mac\)&ip=\$\(ip\)/);
+    assert.match(html, /https:\/\/safisaana\.com\/buy\/tok_abc\?v=3&mac=\$\(mac\)&ip=\$\(ip\)/);
     assert.match(html, /\$\(identity-mac\)/);
     assert.match(html, /location\.replace/);
+    assert.match(html, /\?v=3&mac=/);
     assert.match(html, /Buy internet/);
     assert.doesNotMatch(html, /name="username"/i);
     assert.doesNotMatch(html, /name="password"/i);
@@ -47,7 +48,7 @@ describe("MikroTik hotspot login HTML", () => {
         appUrl: "https://safisaana.com",
         token: "tok_abc",
       });
-      assert.match(html, /\/buy\/tok_abc\?mac=\$\(mac\)/);
+      assert.match(html, /\/buy\/tok_abc\?v=3&mac=\$\(mac\)/);
     }
   });
 

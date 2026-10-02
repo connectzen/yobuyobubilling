@@ -61,7 +61,7 @@ export function BuyForm({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         token,
-        phone: String(formData.get("phone") ?? ""),
+        phone: String(formData.get("mpesa") ?? ""),
         planId: String(formData.get("planId") ?? ""),
         macAddress,
       }),
@@ -83,15 +83,16 @@ export function BuyForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-6 space-y-3">
+    <form onSubmit={onSubmit} className="mt-6 space-y-3" autoComplete="off">
       <label className="text-sm">
-        M-PESA number
+        M-PESA number (start with 07)
         <input
-          name="phone"
+          name="mpesa"
+          type="tel"
           inputMode="numeric"
-          autoComplete="tel"
+          autoComplete="off"
           maxLength={10}
-          placeholder="07XXXXXXXX"
+          placeholder="0712345678"
           required
           className="mt-1 w-full"
         />

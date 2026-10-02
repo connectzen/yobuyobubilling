@@ -3,6 +3,9 @@ import { sql, type Plan, type Router } from "@/lib/db";
 import { BuyForm } from "@/components/buy-form";
 import { clientMacFromQuery } from "@/lib/mikrotik/hotspot-html";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function BuyPage({
   params,
   searchParams,
@@ -27,9 +30,10 @@ export default async function BuyPage({
     <main className="min-h-screen bg-[#0b0d12] px-6 py-10 text-[#eef0f4]">
       <div className="card mx-auto w-full max-w-md p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f5a524]">Yobuyobu</p>
-        <h1 className="mt-3 text-2xl font-semibold">Buy internet</h1>
+        <h1 className="mt-3 text-2xl font-semibold">Pay with M-PESA</h1>
         <p className="mt-2 text-sm text-[#9aa3b2]">
-          Pay with M-PESA. {router.name} connects you as soon as the payment lands.
+          Type your Safaricom number as 07XXXXXXXX. {router.name} opens this phone
+          automatically after the prompt is approved.
         </p>
         <BuyForm
           token={router.token}
