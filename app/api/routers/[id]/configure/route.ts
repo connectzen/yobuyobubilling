@@ -24,6 +24,7 @@ export async function POST(
   }
 
   const wanInterface = String(body?.wanInterface ?? "");
+  const appUrl = getAppUrl();
   let script = "";
   try {
     script = buildServiceConfigScript({
@@ -32,7 +33,9 @@ export async function POST(
       hotspot: Boolean(body?.hotspot),
       pppoe: Boolean(body?.pppoe),
       antiShare: Boolean(body?.antiShare),
-      buyHost: new URL(getAppUrl()).host,
+      buyHost: new URL(appUrl).host,
+      appUrl,
+      routerToken: router.token,
     });
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Invalid configuration");

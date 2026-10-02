@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import { sql, type Plan, type Router } from "@/lib/db";
 import { BuyForm } from "@/components/buy-form";
+import { clientMacFromQuery } from "@/lib/mikrotik/hotspot-html";
 
 export default async function BuyPage({
   params,
   searchParams,
 }: {
   params: { token: string };
-  searchParams: { mac?: string };
+  searchParams: { mac?: string; ip?: string; "identity-mac"?: string };
 }) {
   const db = sql();
   const [router] = await db<Router[]>`
@@ -32,7 +33,7 @@ export default async function BuyPage({
         </p>
         <BuyForm
           token={router.token}
-          macAddress={searchParams.mac ?? ""}
+          macAddress={clientMacFromQuery(searchParams)}
           plans={plans.map((plan) => ({
             id: plan.id,
             name: plan.name,

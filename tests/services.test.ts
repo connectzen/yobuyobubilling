@@ -139,4 +139,50 @@ describe("MikroTik service configuration", () => {
     assert.match(script, /interface list member add list=WAN interface=ether1/);
     assert.match(script, /:do \{ \/interface bridge remove \[find name="yb-lan"\] \} on-error=\{\}/);
   });
+
+  it("installs a buy-page hotspot login template and opens the app host before login", () => {
+    const script = buildServiceConfigScript({
+      wanInterface: "ether1",
+      ports: samplePorts,
+      hotspot: true,
+      pppoe: false,
+      antiShare: false,
+      buyHost: "safisaana.com",
+      appUrl: "https://safisaana.com",
+      routerToken: "tok_abc",
+    });
+
+    assert.match(script, /html-directory=hotspot/);
+    assert.match(script, /\/tool fetch check-certificate=no /);
+    assert.match(
+      script,
+      /url="https:\/\/safisaana\.com\/hotspot\/tok_abc\/login\.html"/,
+    );
+    assert.match(script, /dst-path="hotspot\/login\.html"/);
+    assert.match(script, /url="https:\/\/safisaana\.com\/hotspot\/tok_abc\/status\.html"/);
+    assert.match(script, /url="https:\/\/safisaana\.com\/hotspot\/tok_abc\/logout\.html"/);
+    assert.match(script, /url="https:\/\/safisaana\.com\/hotspot\/tok_abc\/error\.html"/);
+    assert.match(script, /walled-garden add dst-host=safisaana\.com comment=yobuyobu-buy/);
+    assert.match(script, /walled-garden ip add dst-host=safisaana\.com action=accept comment=yobuyobu-buy/);
+    assert.match(script, /login-by="http-chap,http-pap,mac-cookie"/);
+    assert.doesNotMatch(script, /mode=/);
+    assert.doesNotMatch(script, /check-certificate=yes/);
+  });
+
+  it("does not fetch hotspot html when hotspot is off", () => {
+    const script = buildServiceConfigScript({
+      wanInterface: "ether1",
+      ports: samplePorts,
+      hotspot: false,
+      pppoe: true,
+      antiShare: false,
+      buyHost: "safisaana.com",
+      appUrl: "https://safisaana.com",
+      routerToken: "tok_abc",
+    });
+
+    assert.doesNotMatch(script, /login\.html/);
+    assert.doesNotMatch(script, /html-directory/);
+    assert.doesNotMatch(script, /walled-garden/);
+  });
 });

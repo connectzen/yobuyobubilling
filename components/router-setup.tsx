@@ -215,8 +215,9 @@ export function RouterSetup({
       <section className="card p-5">
         <h2 className="font-medium">3. Customer buy link</h2>
         <p className="mt-1 text-sm text-[#9aa3b2]">
-          Customers pay M-PESA here. If the hotspot login page sends <code>?mac=</code>,
-          that device is opened automatically after payment.
+          After you upload configuration, phones that join this hotspot open this page.
+          The login template sends <code>?mac=</code> so the device is opened automatically
+          after M-PESA payment.
         </p>
         <CopyBlock label="Copy link" value={buyUrl} />
       </section>

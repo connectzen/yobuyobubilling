@@ -1,3 +1,5 @@
+import { HOTSPOT_HTML_FILES, hotspotTemplateUrl } from "./hotspot-html.ts";
+
 export type RouterPort = {
   name: string;
   type: string;
@@ -10,6 +12,8 @@ export type ServiceConfigInput = {
   pppoe: boolean;
   antiShare: boolean;
   buyHost?: string;
+  appUrl?: string;
+  routerToken?: string;
 };
 
 const LAN_BRIDGE = "yb-lan";
@@ -32,6 +36,11 @@ function rosValue(value: string): string {
     return value;
   }
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function toolFetch(appUrl: string, url: string, dstPath: string): string {
+  const cert = /^https:/i.test(appUrl) ? " check-certificate=no" : "";
+  return tryDo(`/tool fetch${cert} url="${url}" dst-path=${rosValue(dstPath)}`);
 }
 
 export function normalizeRouterPorts(ports: unknown): RouterPort[] {
@@ -116,15 +125,33 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
       tryDo(`/ip pool add name=yb-hotspot ranges=10.10.0.10-10.10.0.254`),
       tryDo(`/ip address add address=10.10.0.1/24 interface=${LAN_BRIDGE} comment=yobuyobu-hotspot`),
       tryDo(`/ip hotspot profile remove [find name="yb-hotspot"]`),
-      tryDo(`/ip hotspot profile add name=yb-hotspot hotspot-address=10.10.0.1 dns-name=hotspot.yobuyobu login-by="http-chap,http-pap,mac-cookie"`),
+      tryDo(`/ip hotspot profile add name=yb-hotspot hotspot-address=10.10.0.1 dns-name=hotspot.yobuyobu html-directory=hotspot login-by="http-chap,http-pap,mac-cookie"`),
       tryDo(`/ip hotspot user profile remove [find name="yb-hotspot"]`),
       tryDo(`/ip hotspot user profile add name=yb-hotspot shared-users=${input.antiShare ? "1" : "2"} rate-limit=${rosValue("10M/2M")}`),
       tryDo(`/ip hotspot add name=yb-hotspot interface=${LAN_BRIDGE} address-pool=yb-hotspot profile=yb-hotspot`),
     );
     if (input.buyHost) {
+      const host = rosValue(input.buyHost);
+      const wildcard = rosValue(`*.${input.buyHost}`);
       lines.push(
         tryDo(`/ip hotspot walled-garden remove [find comment="yobuyobu-buy"]`),
-        tryDo(`/ip hotspot walled-garden add dst-host=${input.buyHost} comment=yobuyobu-buy`),
+        tryDo(`/ip hotspot walled-garden add dst-host=${host} comment=yobuyobu-buy`),
+        tryDo(`/ip hotspot walled-garden add dst-host=${wildcard} comment=yobuyobu-buy`),
+        tryDo(`/ip hotspot walled-garden ip remove [find comment="yobuyobu-buy"]`),
+        tryDo(`/ip hotspot walled-garden ip add dst-host=${host} action=accept comment=yobuyobu-buy`),
+      );
+    }
+    const appUrl = input.appUrl?.trim().replace(/\/$/, "") ?? "";
+    const token = input.routerToken?.trim() ?? "";
+    if (appUrl && token) {
+      for (const file of HOTSPOT_HTML_FILES) {
+        lines.push(
+          toolFetch(appUrl, hotspotTemplateUrl(appUrl, token, file), `hotspot/${file}`),
+        );
+      }
+      lines.push(
+        ":delay 2s",
+        tryDo(`/ip hotspot profile set [find name="yb-hotspot"] html-directory=hotspot`),
       );
     }
   }
