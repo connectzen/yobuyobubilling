@@ -15,6 +15,7 @@ export type GrantAccessInput = {
   password?: string;
   macAddress?: string;
   ipAddress?: string;
+  sharedUsers?: number;
 };
 
 function tryDo(command: string): string {
@@ -31,6 +32,30 @@ function rosLimitUptime(minutes: number): string {
   return `${minutes}m`;
 }
 
+function rosQuoted(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function rosValue(value: string): string {
+  if (/^[A-Za-z0-9._:-]+$/.test(value)) {
+    return value;
+  }
+  return rosQuoted(value);
+}
+
+function hotspotProfile(input: {
+  uploadKbps: number;
+  downloadKbps: number;
+  sharedUsers: number;
+}) {
+  const sharedUsers = Math.max(1, Math.floor(input.sharedUsers));
+  return {
+    name: `yb-u${input.uploadKbps}-d${input.downloadKbps}-s${sharedUsers}`,
+    rate: rosValue(`${input.uploadKbps}k/${input.downloadKbps}k`),
+    sharedUsers,
+  };
+}
+
 function normalizeClientIp(value?: string): string | undefined {
   const raw = (value ?? "").trim();
   if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(raw)) {
@@ -45,40 +70,58 @@ export function grantAccess(input: GrantAccessInput) {
   }
 
   const expiresAt = new Date(input.now.getTime() + input.durationMinutes * 60_000);
-  const rate = `${input.downloadKbps}k/${input.uploadKbps}k`;
   const password = input.password ?? input.username;
   const mac = normalizeMac(input.macAddress);
   const ip = normalizeClientIp(input.ipAddress);
+  const uptime = rosLimitUptime(input.durationMinutes);
+  const profile = hotspotProfile({
+    uploadKbps: input.uploadKbps,
+    downloadKbps: input.downloadKbps,
+    sharedUsers: input.sharedUsers ?? 1,
+  });
 
   const lines =
     input.serviceType === "pppoe"
       ? [
-          tryDo(`/ppp secret remove [find name="${input.username}"]`),
-          `/ppp secret add name=${input.username} password=${password} service=pppoe profile=yb-pppoe limit-uptime=${rosLimitUptime(input.durationMinutes)}`,
+          tryDo(`/ppp secret remove [find name=${rosQuoted(input.username)}]`),
+          `/ppp secret add name=${rosQuoted(input.username)} password=${rosQuoted(password)} service=pppoe profile=yb-pppoe limit-uptime=${uptime}`,
         ]
       : [
-          `/log warning "yobuyobu paid ${input.username} ${rosLimitUptime(input.durationMinutes)} ${mac ?? "nomac"} ${ip ?? "noip"}"`,
-          tryDo(`/ip hotspot user remove [find name="${input.username}"]`),
-          `/ip hotspot user add name=${input.username} password=${password} profile=yb-hotspot rate-limit=${rate} limit-uptime=${rosLimitUptime(input.durationMinutes)} disabled=no`,
+          `/log warning "yobuyobu paid ${input.username} ${uptime} ${mac ?? "nomac"} ${ip ?? "noip"}"`,
+          tryDo(
+            `/ip hotspot user profile add name=${profile.name} rate-limit=${profile.rate} shared-users=${profile.sharedUsers}`,
+          ),
+          tryDo(
+            `/ip hotspot user profile set [find name=${rosQuoted(profile.name)}] rate-limit=${profile.rate} shared-users=${profile.sharedUsers}`,
+          ),
+          tryDo(`/ip hotspot user remove [find name=${rosQuoted(input.username)}]`),
+          `/ip hotspot user add name=${rosQuoted(input.username)} password=${rosQuoted(password)} profile=${profile.name} limit-uptime=${uptime}${mac ? ` mac-address=${rosQuoted(mac)}` : ""} disabled=no`,
         ];
 
   if (mac && input.serviceType === "hotspot") {
     lines.push(
-      tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
+      tryDo(`/ip hotspot ip-binding remove [find mac-address=${rosQuoted(mac)}]`),
       tryDo(
-        `/ip hotspot ip-binding add mac-address=${mac} type=bypassed comment="yb-${input.username}"`,
+        `/ip hotspot ip-binding add mac-address=${rosQuoted(mac)} type=bypassed comment=${rosQuoted(`yb-${input.username}`)}`,
       ),
     );
     if (ip) {
       lines.push(
         tryDo(
-          `/ip hotspot active login user=${input.username} password=${password} mac-address=${mac} ip=${ip}`,
+          `/ip hotspot active login user=${rosQuoted(input.username)} password=${rosQuoted(password)} mac-address=${rosQuoted(mac)} ip=${ip}`,
         ),
       );
     }
   }
 
-  return { expiresAt, script: lines.join("\n"), rate };
+  return { expiresAt, script: lines.join("\n"), rate: profile.rate };
+}
+
+export function paymentAlreadyProvisioned(payment: {
+  status: string;
+  subscriber_id: string | null;
+}): boolean {
+  return payment.status === "success" && Boolean(payment.subscriber_id);
 }
 
 export function isExpired(expiresAt: Date, now: Date): boolean {
@@ -100,6 +143,55 @@ export function kickScript(
   const lines = [
     tryDo(`/ip hotspot active remove [find user="${username}"]`),
     tryDo(`/ip hotspot user disable [find name="${username}"]`),
+  ];
+  const mac = normalizeMac(macAddress);
+  if (mac) {
+    lines.push(
+      tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
+      tryDo(`/ip hotspot cookie remove [find mac-address="${mac}"]`),
+      tryDo(`/ip hotspot host remove [find mac-address="${mac}"]`),
+    );
+  }
+  return lines.join("\n");
+}
+
+export function resumeScript(
+  username: string,
+  serviceType: ServiceType,
+  macAddress?: string,
+): string {
+  if (serviceType === "pppoe") {
+    return tryDo(`/ppp secret enable [find name="${username}"]`);
+  }
+
+  const lines = [tryDo(`/ip hotspot user enable [find name="${username}"]`)];
+  const mac = normalizeMac(macAddress);
+  if (mac) {
+    lines.push(
+      tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
+      tryDo(
+        `/ip hotspot ip-binding add mac-address=${mac} type=bypassed comment="yb-${username}"`,
+      ),
+    );
+  }
+  return lines.join("\n");
+}
+
+export function removeAccessScript(
+  username: string,
+  serviceType: ServiceType,
+  macAddress?: string,
+): string {
+  if (serviceType === "pppoe") {
+    return [
+      tryDo(`/ppp active remove [find name="${username}"]`),
+      tryDo(`/ppp secret remove [find name="${username}"]`),
+    ].join("\n");
+  }
+
+  const lines = [
+    tryDo(`/ip hotspot active remove [find user="${username}"]`),
+    tryDo(`/ip hotspot user remove [find name="${username}"]`),
   ];
   const mac = normalizeMac(macAddress);
   if (mac) {

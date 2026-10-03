@@ -1,5 +1,6 @@
 import { getOperator } from "@/lib/auth";
 import { sql, type Plan, type Router, type Subscriber } from "@/lib/db";
+import { SubscriberActions } from "@/components/subscriber-actions";
 import { SubscriberForm } from "@/components/subscriber-form";
 
 export default async function SubscribersPage() {
@@ -35,13 +36,15 @@ export default async function SubscribersPage() {
                 <th>Customer</th>
                 <th>Username</th>
                 <th>Plan</th>
+                <th>Status</th>
                 <th>Expires</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {subscribers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-[#9aa3b2]">
+                  <td colSpan={6} className="text-[#9aa3b2]">
                     No subscribers yet.
                   </td>
                 </tr>
@@ -54,8 +57,14 @@ export default async function SubscribersPage() {
                     </td>
                     <td className="font-mono text-xs">{row.username}</td>
                     <td>{row.plan_name}</td>
+                    <td className="capitalize text-[#9aa3b2]">
+                      {row.status === "disabled" ? "paused" : row.status}
+                    </td>
                     <td className="text-[#9aa3b2]">
                       {row.expires_at ? new Date(row.expires_at).toLocaleString() : "—"}
+                    </td>
+                    <td>
+                      <SubscriberActions id={row.id} name={row.name} status={row.status} />
                     </td>
                   </tr>
                 ))

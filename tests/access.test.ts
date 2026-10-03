@@ -5,7 +5,10 @@ import {
   isExpired,
   kickScript,
   normalizeMac,
+  paymentAlreadyProvisioned,
   randomHotspotUsername,
+  removeAccessScript,
+  resumeScript,
 } from "../lib/billing/access.ts";
 
 describe("package access", () => {
@@ -21,10 +24,13 @@ describe("package access", () => {
     });
 
     assert.equal(grant.expiresAt.toISOString(), "2026-10-02T09:00:00.000Z");
-    assert.match(grant.script, /\/ip hotspot user add/);
-    assert.match(grant.script, /name=hs-1001/);
-    assert.match(grant.script, /rate-limit=10240k\/2048k/);
-    assert.match(grant.script, /limit-uptime=1h/);
+    const userAdd = grant.script.split("\n").find((line) => line.includes("/ip hotspot user add")) ?? "";
+    assert.match(grant.script, /\/ip hotspot user profile add name=yb-u2048-d10240-s1/);
+    assert.match(grant.script, /rate-limit="2048k\/10240k"/);
+    assert.match(userAdd, /name="hs-1001"/);
+    assert.match(userAdd, /profile=yb-u2048-d10240-s1/);
+    assert.match(userAdd, /limit-uptime=1h/);
+    assert.doesNotMatch(userAdd, /rate-limit=/);
   });
 
   it("writes a PPPoE secret for PPPoE grants", () => {
@@ -39,8 +45,8 @@ describe("package access", () => {
     });
 
     assert.match(grant.script, /\/ppp secret add/);
-    assert.match(grant.script, /name=cust-22/);
-    assert.match(grant.script, /password=secret22/);
+    assert.match(grant.script, /name="cust-22"/);
+    assert.match(grant.script, /password="secret22"/);
     assert.match(grant.script, /limit-uptime=1d/);
   });
 
@@ -56,9 +62,12 @@ describe("package access", () => {
       ipAddress: "10.10.0.50",
     });
 
-    assert.match(grant.script, /mac-address=AA:BB:CC:DD:EE:FF/);
+    const userAdd = grant.script.split("\n").find((line) => line.includes("/ip hotspot user add")) ?? "";
+    assert.match(userAdd, /mac-address="AA:BB:CC:DD:EE:FF"/);
+    assert.doesNotMatch(userAdd, /(^|\s)address=/);
+    assert.match(grant.script, /mac-address="AA:BB:CC:DD:EE:FF"/);
     assert.match(grant.script, /type=bypassed/);
-    assert.match(grant.script, /\/ip hotspot active login user=ybab12cd34 password=ybab12cd34 mac-address=AA:BB:CC:DD:EE:FF ip=10.10.0.50/);
+    assert.match(grant.script, /\/ip hotspot active login user="ybab12cd34" password="ybab12cd34" mac-address="AA:BB:CC:DD:EE:FF" ip=10.10.0.50/);
     assert.match(grant.script, /:do \{ \/ip hotspot ip-binding add/);
     assert.doesNotMatch(grant.script, /server=yb-hotspot/);
     assert.doesNotMatch(grant.script, /\/ip hotspot host remove/);
@@ -78,6 +87,28 @@ describe("package access", () => {
     assert.notEqual(one, two);
   });
 
+  it("pauses a hotspot user by disabling the account and dropping the MAC bypass", () => {
+    const script = kickScript("ybab12cd34", "hotspot", "AA:BB:CC:DD:EE:FF");
+    assert.match(script, /\/ip hotspot user disable/);
+    assert.match(script, /\/ip hotspot active remove/);
+    assert.match(script, /\/ip hotspot ip-binding remove/);
+  });
+
+  it("resumes a hotspot user and restores the MAC bypass", () => {
+    const script = resumeScript("ybab12cd34", "hotspot", "AA:BB:CC:DD:EE:FF");
+    assert.match(script, /\/ip hotspot user enable/);
+    assert.match(script, /type=bypassed/);
+    assert.match(script, /mac-address=AA:BB:CC:DD:EE:FF/);
+  });
+
+  it("deletes a hotspot user from MikroTik without leaving the MAC bypass", () => {
+    const script = removeAccessScript("ybab12cd34", "hotspot", "AA:BB:CC:DD:EE:FF");
+    assert.match(script, /\/ip hotspot user remove/);
+    assert.match(script, /\/ip hotspot active remove/);
+    assert.match(script, /\/ip hotspot ip-binding remove/);
+    assert.doesNotMatch(script, /\/ip hotspot user disable/);
+  });
+
   it("removes the MAC bypass when the package expires", () => {
     const script = kickScript("ybab12cd34", "hotspot", "AA:BB:CC:DD:EE:FF");
     assert.match(script, /\/ip hotspot ip-binding remove/);
@@ -88,5 +119,11 @@ describe("package access", () => {
     const expiresAt = new Date("2026-10-02T09:00:00.000Z");
     assert.equal(isExpired(expiresAt, new Date("2026-10-02T08:59:59.000Z")), false);
     assert.equal(isExpired(expiresAt, new Date("2026-10-02T09:00:00.000Z")), true);
+  });
+
+  it("does not provision a payment that already has a subscriber", () => {
+    assert.equal(paymentAlreadyProvisioned({ status: "success", subscriber_id: "sub-1" }), true);
+    assert.equal(paymentAlreadyProvisioned({ status: "success", subscriber_id: null }), false);
+    assert.equal(paymentAlreadyProvisioned({ status: "pending", subscriber_id: null }), false);
   });
 });

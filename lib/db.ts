@@ -66,6 +66,7 @@ export type Subscriber = {
   service_type: "hotspot" | "pppoe";
   status: "active" | "expired" | "disabled";
   expires_at: string | null;
+  mac_address: string | null;
 };
 
 export type Voucher = {

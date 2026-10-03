@@ -1,6 +1,9 @@
+import type { Sql, TransactionSql } from "postgres";
 import { sql, type Plan, type Router } from "../db";
-import { grantAccess, normalizeMac, randomHotspotUsername } from "./access";
+import { grantAccess, normalizeMac, paymentAlreadyProvisioned, randomHotspotUsername } from "./access";
 import { kenyaPhoneDisplay } from "./kenya-phone";
+
+type Db = Sql | TransactionSql;
 
 export async function fulfillPaidAccess(input: {
   operatorId: string;
@@ -10,8 +13,7 @@ export async function fulfillPaidAccess(input: {
   phone: string;
   macAddress?: string;
   ipAddress?: string;
-}) {
-  const db = sql();
+}, db: Db = sql()) {
   const [router] = await db<Router[]>`
     select * from routers
     where id = ${input.routerId} and operator_id = ${input.operatorId}
@@ -46,6 +48,7 @@ export async function fulfillPaidAccess(input: {
     password,
     macAddress,
     ipAddress: input.ipAddress,
+    sharedUsers: plan.shared_users,
   });
 
   const rows = await db<{ id: string }[]>`
@@ -69,7 +72,14 @@ export async function applySuccessfulPayment(
   reference: string,
   extra?: { ipAddress?: string },
 ) {
-  const db = sql();
+  return sql().begin(async (tx) => applyLockedPayment(reference, tx, extra));
+}
+
+async function applyLockedPayment(
+  reference: string,
+  db: Db,
+  extra?: { ipAddress?: string },
+) {
   const rows = await db<{
     id: string;
     operator_id: string;
@@ -85,12 +95,13 @@ export async function applySuccessfulPayment(
     from payments
     where reference = ${reference}
     limit 1
+    for update
   `;
   const payment = rows[0];
   if (!payment) {
     throw new Error("Payment not found");
   }
-  if (payment.status === "success" && payment.subscriber_id) {
+  if (paymentAlreadyProvisioned(payment)) {
     const [existing] = await db<{ username: string; password: string; expires_at: string | null }[]>`
       select username, password, expires_at from subscribers where id = ${payment.subscriber_id} limit 1
     `;
@@ -111,11 +122,16 @@ export async function applySuccessfulPayment(
     phone: payment.phone,
     macAddress: payment.mac_address ?? undefined,
     ipAddress: extra?.ipAddress,
-  });
-  await db`
+  }, db);
+  const updated = await db<{ id: string }[]>`
     update payments
     set status = 'success', subscriber_id = ${grant.subscriberId}
     where id = ${payment.id}
+      and subscriber_id is null
+    returning id
   `;
+  if (!updated[0]) {
+    throw new Error("Payment already provisioned");
+  }
   return { duplicate: false, ...grant };
 }
