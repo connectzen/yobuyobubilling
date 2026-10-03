@@ -7,7 +7,7 @@ export async function peekQueuedCommandScript(routerId: string): Promise<string>
     select id, script from router_commands
     where router_id = ${routerId} and status = 'queued'
     order by created_at asc
-    limit 5
+    limit 1
   `;
 
   if (queued.length === 0) {
@@ -26,7 +26,7 @@ export async function ackQueuedCommands(routerId: string): Promise<void> {
       select id from router_commands
       where router_id = ${routerId} and status = 'queued'
       order by created_at asc
-      limit 5
+      limit 1
     )
   `;
 }

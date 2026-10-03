@@ -18,8 +18,10 @@ describe("captive portal buy form", () => {
   it("logs the phone into MikroTik after payment instead of only showing a message", () => {
     assert.match(source, /hotspotPapLoginUrl/);
     assert.match(source, /connectPhone/);
+    assert.match(source, /routerApplied/);
     assert.match(source, /location\.replace/);
     assert.match(source, /Connecting you now/);
+    assert.match(source, /The HotSpot is adding your package/);
     assert.doesNotMatch(source, /You can close this page/);
   });
 });

@@ -25,6 +25,7 @@ export async function GET(request: Request) {
       username: grant.username,
       password: grant.password,
       expiresAt: grant.expiresAt,
+      routerApplied: await routerHasUser(db, grant.username),
     });
   }
   if (payment.status === "failed") {
@@ -42,8 +43,21 @@ export async function GET(request: Request) {
       username: grant.username,
       password: grant.password,
       expiresAt: grant.expiresAt,
+      routerApplied: await routerHasUser(db, grant.username),
     });
   }
 
   return ok({ status: "pending" });
+}
+
+async function routerHasUser(db: ReturnType<typeof sql>, username: string) {
+  const [command] = await db<{ status: string }[]>`
+    select status from router_commands
+    where status = 'sent'
+      and script like '%/ip hotspot user add%'
+      and position(${username} in script) > 0
+    order by created_at desc
+    limit 1
+  `;
+  return Boolean(command);
 }

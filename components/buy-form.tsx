@@ -27,10 +27,7 @@ export function BuyForm({
   const [grant, setGrant] = useState<Grant | null>(null);
 
   function connectPhone(username: string, password: string) {
-    const login = hotspotPapLoginUrl(username, password);
-    window.setTimeout(() => {
-      window.location.replace(login);
-    }, 4000);
+    window.location.replace(hotspotPapLoginUrl(username, password));
   }
 
   useEffect(() => {
@@ -40,7 +37,7 @@ export function BuyForm({
     const timer = window.setInterval(async () => {
       const response = await fetch(`/api/paystack/status?reference=${reference}`);
       const payload = await response.json();
-      if (payload.success && payload.data.status === "success") {
+      if (payload.success && payload.data.status === "success" && payload.data.routerApplied) {
         setGrant({
           username: payload.data.username,
           password: payload.data.password,
@@ -48,6 +45,8 @@ export function BuyForm({
         });
         setMessage("Payment confirmed. Connecting you now…");
         connectPhone(payload.data.username, payload.data.password);
+      } else if (payload.success && payload.data.status === "success") {
+        setMessage("Payment confirmed. The HotSpot is adding your package…");
       }
       if (payload.success && payload.data.status === "failed") {
         setError("Payment failed. Try again.");
@@ -82,13 +81,7 @@ export function BuyForm({
     setReference(payload.data.reference);
     setMessage(payload.data.message);
     if (payload.data.granted) {
-      setGrant({
-        username: payload.data.username,
-        password: payload.data.password,
-        expiresAt: payload.data.expiresAt,
-      });
-      setMessage("Payment confirmed. Connecting you now…");
-      connectPhone(payload.data.username, payload.data.password);
+      setMessage("Payment confirmed. The HotSpot is adding your package…");
     }
   }
 
