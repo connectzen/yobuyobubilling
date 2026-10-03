@@ -100,10 +100,11 @@ export function grantAccess(input: GrantAccessInput) {
 
   if (mac && input.serviceType === "hotspot") {
     lines.push(
-      tryDo(`/ip hotspot ip-binding remove [find mac-address=${rosQuoted(mac)}]`),
       tryDo(
-        `/ip hotspot ip-binding add mac-address=${rosQuoted(mac)} type=bypassed comment=${rosQuoted(`yb-${input.username}`)}`,
+        `/ip hotspot profile set [find name="yb-hotspot"] login-by="http-pap,mac-cookie,http-chap,mac"`,
       ),
+      tryDo(`/ip hotspot ip-binding remove [find mac-address=${rosQuoted(mac)}]`),
+      tryDo(`/ip hotspot cookie remove [find mac-address=${rosQuoted(mac)}]`),
     );
     if (ip) {
       lines.push(
@@ -168,10 +169,11 @@ export function resumeScript(
   const mac = normalizeMac(macAddress);
   if (mac) {
     lines.push(
-      tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
       tryDo(
-        `/ip hotspot ip-binding add mac-address=${mac} type=bypassed comment="yb-${username}"`,
+        `/ip hotspot profile set [find name="yb-hotspot"] login-by="http-pap,mac-cookie,http-chap,mac"`,
       ),
+      tryDo(`/ip hotspot ip-binding remove [find mac-address="${mac}"]`),
+      tryDo(`/ip hotspot cookie remove [find mac-address="${mac}"]`),
     );
   }
   return lines.join("\n");

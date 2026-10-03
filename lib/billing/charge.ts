@@ -23,13 +23,15 @@ export async function startPackageCharge(input: {
   } catch {
     macAddress = undefined;
   }
+  const clientIp = (input.ipAddress ?? "").trim();
+  const storedIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(clientIp) ? clientIp : null;
   const db = sql();
   const reference = `yb_${crypto.randomUUID().replaceAll("-", "")}`;
   await db`
-    insert into payments (operator_id, router_id, plan_id, reference, phone, amount_kes, customer_name, mac_address)
+    insert into payments (operator_id, router_id, plan_id, reference, phone, amount_kes, customer_name, mac_address, client_ip)
     values (
       ${input.operatorId}, ${input.router.id}, ${input.plan.id}, ${reference},
-      ${displayPhone}, ${input.plan.price_kes}, ${name}, ${macAddress ?? null}
+      ${displayPhone}, ${input.plan.price_kes}, ${name}, ${macAddress ?? null}, ${storedIp}
     )
   `;
 

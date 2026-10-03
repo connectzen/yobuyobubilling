@@ -89,9 +89,10 @@ async function applyLockedPayment(
     customer_name: string;
     status: string;
     mac_address: string | null;
+    client_ip: string | null;
     subscriber_id: string | null;
   }[]>`
-    select id, operator_id, router_id, plan_id, phone, customer_name, status, mac_address, subscriber_id
+    select id, operator_id, router_id, plan_id, phone, customer_name, status, mac_address, client_ip, subscriber_id
     from payments
     where reference = ${reference}
     limit 1
@@ -121,7 +122,7 @@ async function applyLockedPayment(
     name: payment.customer_name,
     phone: payment.phone,
     macAddress: payment.mac_address ?? undefined,
-    ipAddress: extra?.ipAddress,
+    ipAddress: extra?.ipAddress || payment.client_ip || undefined,
   }, db);
   const updated = await db<{ id: string }[]>`
     update payments

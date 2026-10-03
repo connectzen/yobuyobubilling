@@ -50,7 +50,7 @@ describe("package access", () => {
     assert.match(grant.script, /limit-uptime=1d/);
   });
 
-  it("bypasses and logs in the hotspot client immediately when a MAC is known", () => {
+  it("logs the phone into HotSpot so the package profile applies", () => {
     const grant = grantAccess({
       now: new Date("2026-10-02T08:00:00.000Z"),
       durationMinutes: 60,
@@ -65,13 +65,31 @@ describe("package access", () => {
     const userAdd = grant.script.split("\n").find((line) => line.includes("/ip hotspot user add")) ?? "";
     assert.match(userAdd, /mac-address="AA:BB:CC:DD:EE:FF"/);
     assert.doesNotMatch(userAdd, /(^|\s)address=/);
-    assert.match(grant.script, /mac-address="AA:BB:CC:DD:EE:FF"/);
-    assert.match(grant.script, /type=bypassed/);
+    assert.match(grant.script, /login-by="http-pap,mac-cookie,http-chap,mac"/);
+    assert.match(grant.script, /\/ip hotspot ip-binding remove/);
     assert.match(grant.script, /\/ip hotspot active login user="ybab12cd34" password="ybab12cd34" mac-address="AA:BB:CC:DD:EE:FF" ip=10.10.0.50/);
-    assert.match(grant.script, /:do \{ \/ip hotspot ip-binding add/);
+    assert.doesNotMatch(grant.script, /type=bypassed/);
+    assert.doesNotMatch(grant.script, /\/ip hotspot ip-binding add/);
     assert.doesNotMatch(grant.script, /server=yb-hotspot/);
     assert.doesNotMatch(grant.script, /\/ip hotspot host remove/);
-    assert.doesNotMatch(grant.script, /\/ip hotspot cookie add/);
+  });
+
+  it("keeps a known MAC on the HotSpot user when the portal did not send an IP", () => {
+    const grant = grantAccess({
+      now: new Date("2026-10-02T08:00:00.000Z"),
+      durationMinutes: 60,
+      downloadKbps: 2000,
+      uploadKbps: 2000,
+      serviceType: "hotspot",
+      username: "ybab12cd34",
+      macAddress: "AA:BB:CC:DD:EE:FF",
+    });
+
+    assert.match(grant.script, /profile=yb-u2000-d2000-s1/);
+    assert.match(grant.script, /mac-address="AA:BB:CC:DD:EE:FF"/);
+    assert.match(grant.script, /login-by="http-pap,mac-cookie,http-chap,mac"/);
+    assert.doesNotMatch(grant.script, /type=bypassed/);
+    assert.doesNotMatch(grant.script, /\/ip hotspot active login/);
   });
 
   it("normalizes compact and hyphen MAC addresses", () => {
@@ -94,11 +112,12 @@ describe("package access", () => {
     assert.match(script, /\/ip hotspot ip-binding remove/);
   });
 
-  it("resumes a hotspot user and restores the MAC bypass", () => {
+  it("resumes a hotspot user without opening a MAC bypass", () => {
     const script = resumeScript("ybab12cd34", "hotspot", "AA:BB:CC:DD:EE:FF");
     assert.match(script, /\/ip hotspot user enable/);
-    assert.match(script, /type=bypassed/);
-    assert.match(script, /mac-address=AA:BB:CC:DD:EE:FF/);
+    assert.match(script, /\/ip hotspot ip-binding remove/);
+    assert.match(script, /login-by="http-pap,mac-cookie,http-chap,mac"/);
+    assert.doesNotMatch(script, /type=bypassed/);
   });
 
   it("deletes a hotspot user from MikroTik without leaving the MAC bypass", () => {
