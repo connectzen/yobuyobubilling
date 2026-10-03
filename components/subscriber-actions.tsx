@@ -20,7 +20,7 @@ export function SubscriberActions({
     const prompts = {
       pause: `Pause ${name}? They lose internet until you resume them. MikroTik applies this within a few seconds.`,
       resume: `Resume ${name}? MikroTik will enable this account again.`,
-      delete: `Delete ${name}? This removes them from MikroTik. Payment records stay.`,
+      delete: `Remove ${name} from MikroTik? They stay on this list as paused until the router drops them.`,
     };
     if (!window.confirm(prompts[action])) {
       return;

@@ -59,7 +59,21 @@ export function buildBootstrapScript(input: {
   :local id [/system identity get name]
   :local ver [/system resource get version]
   :local board [/system resource get board-name]
-  /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\"}") output=none
+  :local ybusers ""
+  :local ybactive ""
+  :local ybbypass ""
+  :do {
+    :foreach i in=[/ip hotspot user find] do={
+      :set ybusers ($ybusers . [/ip hotspot user get $i name] . ",")
+    }
+    :foreach i in=[/ip hotspot active find] do={
+      :set ybactive ($ybactive . [/ip hotspot active get $i user] . "|" . [/ip hotspot active get $i address] . "|" . [/ip hotspot active get $i mac-address] . ";")
+    }
+    :foreach i in=[/ip hotspot ip-binding find where type="bypassed"] do={
+      :set ybbypass ($ybbypass . [/ip hotspot ip-binding get $i mac-address] . "|" . [/ip hotspot ip-binding get $i comment] . ";")
+    }
+  } on-error={}
+  /tool fetch${fetchFlags(appUrl)} http-method=post http-header-field="content-type: application/json" url="${syncUrl}" http-data=("{\\"identity\\":\\"" . $id . "\\",\\"version\\":\\"" . $ver . "\\",\\"board\\":\\"" . $board . "\\",\\"interfaces\\":\\"" . $names . "\\",\\"users\\":\\"" . $ybusers . "\\",\\"actives\\":\\"" . $ybactive . "\\",\\"bypass\\":\\"" . $ybbypass . "\\"}") output=none
   :local ybrun [/tool fetch${fetchFlags(appUrl)} url="${runUrl}" output=user as-value]
   :local ybcmd ""
   :do { :set ybcmd ($ybrun->"data") } on-error={}

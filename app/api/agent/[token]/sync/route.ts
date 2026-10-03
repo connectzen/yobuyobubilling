@@ -1,6 +1,7 @@
 import { sql, type Router } from "@/lib/db";
 import { rsc } from "@/lib/api";
 import { kickScript } from "@/lib/billing/access";
+import { parseHotspotReport } from "@/lib/mikrotik/presence";
 import { idleAgentScript, parseInterfaceReport } from "@/lib/mikrotik/provision";
 
 export async function POST(
@@ -30,6 +31,22 @@ export async function POST(
         status = ${nextStatus}
     where id = ${router.id}
   `;
+
+  if (payload.users !== undefined || payload.actives !== undefined || payload.bypass !== undefined) {
+    const presence = parseHotspotReport({
+      users: String(payload.users ?? ""),
+      actives: String(payload.actives ?? ""),
+      bypass: String(payload.bypass ?? ""),
+    });
+    const kindCode = { active: 1, account: 2, bypassed: 3 } as const;
+    await db`delete from sessions where router_id = ${router.id}`;
+    for (const row of presence) {
+      await db`
+        insert into sessions (router_id, username, mac, ip, bytes_in)
+        values (${router.id}, ${row.username}, ${row.mac}, ${row.ip}, ${kindCode[row.state]})
+      `;
+    }
+  }
 
   const expired = await db<{ username: string; service_type: "hotspot" | "pppoe"; id: string; mac_address: string | null }[]>`
     select id, username, service_type, mac_address from subscribers

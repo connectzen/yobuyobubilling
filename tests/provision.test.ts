@@ -46,6 +46,9 @@ describe("MikroTik provision scripts", () => {
     assert.match(script, /\/system scheduler/);
     assert.match(script, /yobuyobu-agent/);
     assert.match(script, /\/api\/agent\/tok_abc\/sync/);
+    assert.match(script, /\/ip hotspot active find/);
+    assert.match(script, /\/ip hotspot user find/);
+    assert.match(script, /type="bypassed"/);
     assert.match(script, /\/api\/agent\/tok_abc\/run/);
     assert.match(script, /interval=3s/);
     assert.match(script, /\/tool fetch check-certificate=no /);

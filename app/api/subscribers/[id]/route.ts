@@ -97,14 +97,8 @@ export async function DELETE(
       values (${row.router_id}, ${removeAccessScript(row.username, row.service_type, row.mac_address ?? undefined)})
     `;
     await tx`
-      update payments set subscriber_id = null where subscriber_id = ${row.id}
-    `;
-    await tx`
-      update vouchers set subscriber_id = null where subscriber_id = ${row.id}
-    `;
-    await tx`
-      delete from subscribers where id = ${row.id} and operator_id = ${operator.id}
+      update subscribers set status = 'disabled' where id = ${row.id} and operator_id = ${operator.id}
     `;
   });
-  return ok({ deleted: true });
+  return ok({ deleted: false, status: "disabled" });
 }

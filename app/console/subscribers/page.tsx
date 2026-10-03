@@ -28,6 +28,7 @@ export default async function SubscribersPage() {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Subscribers</h1>
         <p className="mt-2 text-sm text-[#9aa3b2]">
           Active grants pushed to MikroTik after payment or manual access.
+          Someone who is only on the router is listed under Sessions, where you can remove them.
         </p>
         <div className="table-wrap mt-8">
           <table>
