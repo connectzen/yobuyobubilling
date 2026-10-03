@@ -29,52 +29,46 @@ export function parseHotspotReport(input: {
   actives?: string;
   bypass?: string;
 }): HotspotPresence[] {
-  const active = (input.actives ?? "")
-    .split(";")
-    .map((part) => {
-      const [username, ip, mac] = part.split("|");
-      const name = cleanName(username ?? "");
-      if (!name) {
-        return null;
-      }
-      return {
-        username: name,
-        ip: cleanIp(ip ?? ""),
-        mac: cleanMac(mac ?? ""),
-        state: "active" as const,
-      };
-    })
-    .filter((row): row is HotspotPresence => Boolean(row));
+  const active: HotspotPresence[] = [];
+  for (const part of (input.actives ?? "").split(";")) {
+    const [username, ip, mac] = part.split("|");
+    const name = cleanName(username ?? "");
+    if (!name) {
+      continue;
+    }
+    active.push({
+      username: name,
+      ip: cleanIp(ip ?? ""),
+      mac: cleanMac(mac ?? ""),
+      state: "active",
+    });
+  }
 
   const online = new Set(active.map((row) => row.username));
-  const accounts = (input.users ?? "")
-    .split(",")
-    .map((name) => cleanName(name))
-    .filter((name): name is string => Boolean(name) && !online.has(name))
-    .map((username) => ({
-      username,
-      mac: null,
-      ip: null,
-      state: "account" as const,
-    }));
+  const accounts: HotspotPresence[] = [];
+  for (const part of (input.users ?? "").split(",")) {
+    const name = cleanName(part);
+    if (!name || online.has(name)) {
+      continue;
+    }
+    accounts.push({ username: name, mac: null, ip: null, state: "account" });
+  }
 
-  const bypassed = (input.bypass ?? "")
-    .split(";")
-    .map((part) => {
-      const [mac, comment] = part.split("|");
-      const cleanedMac = cleanMac(mac ?? "");
-      if (!cleanedMac) {
-        return null;
-      }
-      const fromComment = cleanName((comment ?? "").replace(/^yb-/, ""));
-      return {
-        username: fromComment ?? "bypassed",
-        mac: cleanedMac,
-        ip: null,
-        state: "bypassed" as const,
-      };
-    })
-    .filter((row): row is HotspotPresence => Boolean(row));
+  const bypassed: HotspotPresence[] = [];
+  for (const part of (input.bypass ?? "").split(";")) {
+    const [mac, comment] = part.split("|");
+    const cleanedMac = cleanMac(mac ?? "");
+    if (!cleanedMac) {
+      continue;
+    }
+    const fromComment = cleanName((comment ?? "").replace(/^yb-/, ""));
+    bypassed.push({
+      username: fromComment ?? "bypassed",
+      mac: cleanedMac,
+      ip: null,
+      state: "bypassed",
+    });
+  }
 
   return [...active, ...accounts, ...bypassed];
 }
