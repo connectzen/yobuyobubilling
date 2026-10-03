@@ -209,9 +209,9 @@ describe("MikroTik service configuration", () => {
 
     assert.match(script, /bridge=yb-lan interface=ether2/);
     assert.match(script, /bridge=yb-lan interface=sfp1/);
-    assert.match(script, /bridge=yb-lan interface=wifi1/);
+    assert.doesNotMatch(script, /bridge=yb-lan interface=wifi1/);
     assert.match(script, /\/interface bridge add name=yb-lan comment=yobuyobu-lan protocol-mode=none/);
-    assert.match(script, /datapath\.bridge=yb-lan/);
+    assert.match(script, /\/interface wifi datapath add name=yb-lan bridge=yb-lan/);
     assert.match(script, /\/ip dhcp-server add name=yb-hotspot interface=yb-lan address-pool=yb-hotspot/);
     assert.match(script, /\/ip dhcp-server network add address=10\.10\.0\.0\/24 gateway=10\.10\.0\.1/);
     assert.match(script, /dst-port=67-68/);
@@ -220,7 +220,7 @@ describe("MikroTik service configuration", () => {
     assert.doesNotMatch(script, /comment=yobuyobu-lan-in/);
     assert.match(
       script,
-      /\/interface wifi set \[find name="wifi1"\] disabled=no configuration\.ssid=manyatta configuration\.mode=ap/,
+      /\/interface wifi set \[find name="wifi1"\] disabled=no configuration\.ssid=manyatta configuration\.mode=ap datapath=yb-lan/,
     );
   });
 

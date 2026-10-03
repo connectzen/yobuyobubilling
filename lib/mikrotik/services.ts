@@ -129,6 +129,7 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
     tryDo(`/ip dhcp-server disable [find interface="bridge"]`),
     tryDo(`/ip address remove [find comment="yobuyobu-hotspot"]`),
     tryDo(`/interface wifi datapath remove [find name="yb-hotspot"]`),
+    tryDo(`/interface wifi datapath remove [find name="yb-lan"]`),
     tryDo(`/interface bridge port remove [find comment="yobuyobu-lan"]`),
     tryDo(`/interface bridge remove [find name="${LAN_BRIDGE}"]`),
     tryDo(`/interface bridge add name=${LAN_BRIDGE} comment=yobuyobu-lan protocol-mode=none`),
@@ -141,8 +142,11 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
   ];
 
   for (const port of lanPortRecords) {
+    lines.push(tryDo(`/interface bridge port remove [find interface="${port.name}"]`));
+    if (isWifiwavePort(port)) {
+      continue;
+    }
     lines.push(
-      tryDo(`/interface bridge port remove [find interface="${port.name}"]`),
       tryDo(
         `/interface bridge port add bridge=${LAN_BRIDGE} interface=${port.name} comment=yobuyobu-lan`,
       ),
@@ -150,14 +154,14 @@ export function buildServiceConfigScript(input: ServiceConfigInput): string {
   }
 
   if (wifiwavePorts.length > 0) {
+    lines.push(tryDo(`/interface wifi datapath add name=yb-lan bridge=${LAN_BRIDGE}`));
     for (const port of wifiwavePorts) {
       lines.push(
         tryDo(`/interface list member remove [find interface="${port.name}"]`),
         tryDo(`/interface list member add list=LAN interface=${port.name}`),
         tryDo(
-          `/interface wifi set [find name="${port.name}"] disabled=no configuration.ssid=${rosValue(ssid)} configuration.mode=ap`,
+          `/interface wifi set [find name="${port.name}"] disabled=no configuration.ssid=${rosValue(ssid)} configuration.mode=ap datapath=yb-lan`,
         ),
-        tryDo(`/interface wifi set [find name="${port.name}"] datapath.bridge=${LAN_BRIDGE}`),
         tryDo(`/interface wifi set [find name="${port.name}"] datapath.client-isolation=no`),
         tryDo(`/interface wifi set [find name="${port.name}"] security.authentication-types=""`),
       );
